@@ -14,8 +14,13 @@
       Zotero 回收站。</description
     >
     <hbox align="center">
-      <label data-l10n-id="preferences-delete-concurrency">删除并行数量</label>
+      <label
+        data-l10n-id="preferences-delete-concurrency"
+        control="bibtex-clean-delete-concurrency"
+        >删除并行数量</label
+      >
       <html:input
+        id="bibtex-clean-delete-concurrency"
         type="number"
         min="1"
         max="20"

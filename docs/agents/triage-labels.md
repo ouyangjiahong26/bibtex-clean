@@ -14,4 +14,4 @@
 
 编辑右侧列以匹配你实际使用的词汇。
 
-`ai-generated` 与分流角色无关，它标记内容是 AI 生成的，见 `CONTRIBUTING.md` 的「AI 贡献」。它与本表五种标签可以同时存在。
+`ai-generated` 与分流角色无关，它标记内容是 AI 生成的，见 `CONTRIBUTING.md` 的 AI 贡献一节。它与本表五种标签可以同时存在。

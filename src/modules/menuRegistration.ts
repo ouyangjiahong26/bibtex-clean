@@ -35,7 +35,7 @@ export function registerItemMenu(
     commandListener: onUndo,
   });
 
-  // 「筛选删除」与「清理」语义不同、风险等级不同，独立入口，不并入清理流程
+  // 筛选删除与清理语义不同、风险等级不同，独立入口，不并入清理流程
   ztoolkit.Menu.register("item", {
     tag: "menuitem",
     id: "zotero-itemmenu-bibtexclean-filter-delete",

@@ -243,7 +243,7 @@ describe("filterCandidates", function () {
           operator: "notContains",
         }),
       ];
-      // 笔记正文含「扫描版」→ 命中否定条件，被排除
+      // 笔记正文含 扫描版，命中否定条件，被排除
       assert.deepEqual(filterCandidates(candidates, filter({ conditions })), [
         snapshot,
         linkedUrl,

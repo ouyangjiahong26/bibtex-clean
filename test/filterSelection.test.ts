@@ -83,7 +83,7 @@ describe("filterSelection", function () {
       );
       assert.deepEqual(titled.checkedKeys, [candidateKey(snapshot)]);
 
-      // 「全部」模式下第二行把快照排除掉：快照没有笔记正文
+      // 全部模式下第二行把快照排除掉：快照没有笔记正文
       const withNoteRow = addCondition(titled, candidates);
       const both = withCondition(
         withNoteRow,

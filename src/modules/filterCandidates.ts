@@ -32,7 +32,7 @@ export type CandidateFilter = {
  * 一次筛选删除中可能被删除的子条目。
  *
  * `parentTitle` 只用于列表中区分候选从哪条题录来，不参与条件匹配——
- * 字段范围里没有「父条目标题」这一项。
+ * 字段范围里没有父条目标题这一项。
  */
 export type Candidate = {
   itemKey: string;
@@ -55,7 +55,7 @@ export function candidateKey(candidate: Candidate): string {
 
 /**
  * 取出有效的条件行：值为空的行被忽略。
- * 空值行当作恒真会在「任一」模式下命中全部候选。
+ * 空值行当作恒真会在 `任一` 模式下命中全部候选。
  */
 export function activeConditions(
   conditions: FilterCondition[],
@@ -121,7 +121,7 @@ export function filterCandidates(
 /**
  * 可见行的默认勾选状态。
  *
- * 含「不包含」条件时默认不勾选：否则「标题 不包含 扫描版」这类条件会把
+ * 含 `不包含` 条件时默认不勾选：否则 `标题 不包含 扫描版` 这类条件会把
  * 几乎所有候选标成可见并勾上，一键删除面极大。
  */
 export function defaultCheckedKeys(

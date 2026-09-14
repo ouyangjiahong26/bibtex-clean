@@ -26,6 +26,7 @@ export default defineConfig({
     },
     prefs: {
       prefix: pkg.config.prefsPrefix,
+      dts: "typings/prefs.d.ts",
     },
     esbuildOptions: [
       {

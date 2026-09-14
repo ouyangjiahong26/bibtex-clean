@@ -2,9 +2,9 @@ import { assert } from "chai";
 import {
   renderDialog,
   renderDialogHtml,
-  escapeHtml,
   type DialogData,
 } from "../src/modules/cleaningDialog";
+import { escapeHtml } from "../src/utils/html";
 import type { Change } from "../src/modules/changes";
 
 /** Mock getString: returns "key" or "key:arg1=val1,arg2=val2" */

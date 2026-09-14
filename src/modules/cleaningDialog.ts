@@ -8,8 +8,10 @@
  */
 
 import type { Change } from "./changes";
-import type { Locale } from "../utils/locale";
-import { getString } from "../utils/locale";
+import type { FluentMessageId } from "../../typings/i10n";
+import { getString, type StringGetter } from "../utils/locale";
+import { escapeHtml } from "../utils/html";
+import { waitForDialogClose } from "../utils/dialog";
 
 // ── 结构化数据类型 ──────────────────────────────────────────────
 
@@ -20,6 +22,12 @@ export type DialogRow = {
   newValue: string;
 };
 
+const FIELD_NAME_KEYS: Record<string, FluentMessageId | undefined> = {
+  author: "field-author",
+  issue: "field-issue",
+  volume: "field-volume",
+};
+
 export type DialogData = {
   summary: string;
   columns: [string, string, string];
@@ -27,11 +35,6 @@ export type DialogData = {
 };
 
 // ── 纯数据渲染 ──────────────────────────────────────────────────
-
-type StringGetter = (
-  key: string,
-  options?: { args?: Record<string, unknown> },
-) => string;
 
 /**
  * 从变更列表计算对话框所需的结构化数据。
@@ -60,12 +63,16 @@ export function renderDialog(
       getStringFn("dialog-column-field"),
       getStringFn("dialog-column-change"),
     ],
-    rows: changes.map((change) => ({
-      itemTitle: change.itemTitle,
-      fieldName: getStringFn(`field-${change.field}`),
-      oldValue: change.oldValue,
-      newValue: change.newValue,
-    })),
+    rows: changes.map((change) => {
+      // 规则里的字段都有对应文案；万一出现新字段，退回显示字段 id
+      const fieldKey = FIELD_NAME_KEYS[change.field];
+      return {
+        itemTitle: change.itemTitle,
+        fieldName: fieldKey ? getStringFn(fieldKey) : change.field,
+        oldValue: change.oldValue,
+        newValue: change.newValue,
+      };
+    }),
   };
 }
 
@@ -158,35 +165,6 @@ export function renderDialogHtml(data: DialogData): string {
   `;
 }
 
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-// ── waitForClose seam ───────────────────────────────────────────
-
-/**
- * 轮询等待对话框关闭。默认实现，可注入 fake 用于测试。
- */
-function defaultWaitForClose(
-  dialog: InstanceType<ZToolkit["Dialog"]>,
-): Promise<void> {
-  return new Promise<void>((resolve) => {
-    const check = () => {
-      if (dialog.window?.closed) {
-        resolve();
-        return;
-      }
-      setTimeout(check, 100);
-    };
-    check();
-  });
-}
-
 // ── 对话框入口 ──────────────────────────────────────────────────
 
 /**
@@ -241,7 +219,7 @@ export async function openCleaningConfirmationDialog(
     fitContent: true,
   });
 
-  await (waitForClose ?? defaultWaitForClose)(dialog);
+  await (waitForClose ?? waitForDialogClose)(dialog);
 
   return dialogData._lastButtonId === "confirm-clean" ? "confirm" : "cancel";
 }

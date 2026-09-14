@@ -15,7 +15,7 @@
 
 ## AI 生成的 issue、PR 与评论
 
-AI 创建的内容必须带 `[AI Generated]` 标记，规范全文见 `CONTRIBUTING.md` 的「AI 贡献」。
+AI 创建的内容必须带 `[AI Generated]` 标记，规范全文见 `CONTRIBUTING.md` 的 AI 贡献一节。
 
 - **创建 issue 或 PR**：标题最开头加 `[AI Generated] `，并加 `ai-generated` 标签。
 

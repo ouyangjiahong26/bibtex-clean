@@ -11,9 +11,9 @@ export interface Locale {
   ): string;
 }
 
-/** 供对话框等纯数据层注入的最小 i18n 函数签名。 */
+/** 供对话框等纯数据层注入的最小 i18n 函数签名。键类型收紧到生成的 FluentMessageId，写错键名编译即报错。 */
 export type StringGetter = (
-  key: string,
+  key: FluentMessageId,
   options?: { args?: Record<string, unknown> },
 ) => string;
 

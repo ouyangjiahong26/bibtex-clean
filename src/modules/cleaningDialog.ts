@@ -8,6 +8,7 @@
  */
 
 import type { Change } from "./changes";
+import type { FluentMessageId } from "../../typings/i10n";
 import { getString, type StringGetter } from "../utils/locale";
 import { escapeHtml } from "../utils/html";
 import { waitForDialogClose } from "../utils/dialog";
@@ -19,6 +20,12 @@ export type DialogRow = {
   fieldName: string;
   oldValue: string;
   newValue: string;
+};
+
+const FIELD_NAME_KEYS: Record<string, FluentMessageId | undefined> = {
+  author: "field-author",
+  issue: "field-issue",
+  volume: "field-volume",
 };
 
 export type DialogData = {
@@ -56,12 +63,16 @@ export function renderDialog(
       getStringFn("dialog-column-field"),
       getStringFn("dialog-column-change"),
     ],
-    rows: changes.map((change) => ({
-      itemTitle: change.itemTitle,
-      fieldName: getStringFn(`field-${change.field}`),
-      oldValue: change.oldValue,
-      newValue: change.newValue,
-    })),
+    rows: changes.map((change) => {
+      // 规则里的字段都有对应文案；万一出现新字段，退回显示字段 id
+      const fieldKey = FIELD_NAME_KEYS[change.field];
+      return {
+        itemTitle: change.itemTitle,
+        fieldName: fieldKey ? getStringFn(fieldKey) : change.field,
+        oldValue: change.oldValue,
+        newValue: change.newValue,
+      };
+    }),
   };
 }
 

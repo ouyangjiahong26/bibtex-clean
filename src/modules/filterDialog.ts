@@ -24,6 +24,7 @@ import {
   type MatchMode,
 } from "./filterCandidates";
 import type { FilterDialogState } from "./filterSelection";
+import type { FluentMessageId } from "../../typings/i10n";
 import { getString, type StringGetter } from "../utils/locale";
 
 // ── 结构化数据类型 ──────────────────────────────────────────────
@@ -58,7 +59,7 @@ export type FilterDialogData = {
   rows: FilterCandidateRow[];
 };
 
-const FIELD_KEYS: Record<FilterField, string> = {
+const FIELD_KEYS: Record<FilterField, FluentMessageId> = {
   any: "dialog-filter-field-any",
   title: "dialog-filter-field-title",
   url: "dialog-filter-field-url",
@@ -66,12 +67,12 @@ const FIELD_KEYS: Record<FilterField, string> = {
   note: "dialog-filter-field-note",
 };
 
-const OPERATOR_KEYS: Record<FilterOperator, string> = {
+const OPERATOR_KEYS: Record<FilterOperator, FluentMessageId> = {
   contains: "dialog-filter-operator-contains",
   notContains: "dialog-filter-operator-not-contains",
 };
 
-const KIND_KEYS: Record<CandidateKind, string> = {
+const KIND_KEYS: Record<CandidateKind, FluentMessageId> = {
   "link-attachment": "dialog-filter-kind-link-attachment",
   note: "dialog-filter-kind-note",
 };

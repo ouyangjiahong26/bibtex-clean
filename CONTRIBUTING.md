@@ -34,10 +34,10 @@ ZOTERO_PLUGIN_PROFILE_PATH=/path/to/profile
 
   ```
   fix(zoteroWriter): formatAuthors 在 firstName 为空时不应产生末尾逗号
-  feat: 剥离 volume 的 Vol. 前缀与 number 的 No. 前缀
+  feat(zoteroWriter): 支持专利条目的 inventor 创作者类型
   ```
 
-- 一个 PR 只做一件事。PR 标题与提交信息同格式，正文按 `.github/PULL_REQUEST_TEMPLATE.md` 填写：关联 issue、改了什么、如何验证。
+- 一个 PR 只做一件事。PR 标题与提交信息同格式，AI 生成的内容则在最前面加 `[AI Generated] `（见下节）。正文按 `.github/PULL_REQUEST_TEMPLATE.md` 填写：关联 issue、改了什么、如何验证。
 - 改动接口或行为时，同步更新调用方、测试和文档，不保留无需求的兼容层。
 
 ## CI 会检查什么

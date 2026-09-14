@@ -51,4 +51,9 @@ export type FluentMessageId =
   | 'message-success-partial'
   | 'message-success-partial-delete'
   | 'message-success-undone'
-  | 'message-undo';
+  | 'message-undo'
+  | 'preferences-delete-concurrency'
+  | 'preferences-delete-concurrency-hint'
+  | 'preferences-delete-description'
+  | 'preferences-delete-title'
+  | 'preferences-pane-title';

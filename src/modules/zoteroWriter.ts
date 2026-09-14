@@ -3,6 +3,7 @@
  */
 
 import type { CleanableItem, FieldChange } from "./changes";
+import { chunk } from "../utils/chunk";
 
 /**
  * 从 Zotero Item 提取可清理字段。
@@ -56,7 +57,7 @@ async function applyChangeValues(
   failed: { change: FieldChange; error: Error }[];
 }> {
   const groups = groupChangesByItem(changes);
-  const batches = chunkArray(groups, BATCH_SIZE);
+  const batches = chunk(groups, BATCH_SIZE);
 
   const succeeded: FieldChange[] = [];
   const failed: { change: FieldChange; error: Error }[] = [];
@@ -96,15 +97,6 @@ function groupChangesByItem(changes: FieldChange[]): FieldChange[][] {
     }
   }
   return [...map.values()];
-}
-
-/** 将数组等分为指定大小的块。 */
-function chunkArray<T>(arr: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    result.push(arr.slice(i, i + size));
-  }
-  return result;
 }
 
 /** 对一个条目的所有变更一次性写入。 */

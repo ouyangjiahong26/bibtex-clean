@@ -21,7 +21,12 @@ import {
   collectCandidates,
   moveCandidatesToTrash,
 } from "./modules/zoteroChildren";
-import { createLocale, initLocale, type Locale } from "./utils/locale";
+import {
+  createLocale,
+  getString,
+  initLocale,
+  type Locale,
+} from "./utils/locale";
 import { createNotifier } from "./utils/notifications";
 import { createZToolkit } from "./utils/ztoolkit";
 
@@ -72,12 +77,30 @@ async function onStartup() {
   ]);
 
   initLocale();
+  await registerPreferencesPane();
 
   await Promise.all(
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
   );
 
   addon.data.initialized = true;
+}
+
+/**
+ * 注册设置页：删除的并行数量在这里调整。
+ * 注册失败只记录，不让插件启动失败——设置页缺失不影响清理与删除本身。
+ */
+async function registerPreferencesPane(): Promise<void> {
+  try {
+    await Zotero.PreferencePanes.register({
+      pluginID: addon.data.config.addonID,
+      src: "content/preferences.xhtml",
+      label: getString("preferences-pane-title"),
+      image: "content/icons/favicon.png",
+    });
+  } catch (error) {
+    Zotero.debug(`[${addon.data.config.addonName}] 设置页注册失败：${error}`);
+  }
 }
 
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {

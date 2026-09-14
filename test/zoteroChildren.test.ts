@@ -1,6 +1,7 @@
 import { assert } from "chai";
 import {
   collectCandidates,
+  deleteConcurrency,
   isLinkAttachment,
   moveCandidatesToTrash,
   toCandidate,
@@ -28,6 +29,7 @@ type MockItemOptions = {
   notes?: number[];
   parentItemID?: number | false;
   saveError?: Error;
+  saveHook?: () => void | Promise<void>;
 };
 
 type MockItem = Zotero.Item & { deleted: boolean };
@@ -52,6 +54,9 @@ function createMockItem(options: MockItemOptions): MockItem {
     getAttachments: () => options.attachments ?? [],
     getNotes: () => options.notes ?? [],
     saveTx: async () => {
+      if (options.saveHook) {
+        await options.saveHook();
+      }
       if (options.saveError) throw options.saveError;
     },
     // 只实现被测代码用到的成员，其余成员由断言以外的地方承担
@@ -62,6 +67,7 @@ function createMockItem(options: MockItemOptions): MockItem {
 let itemsByID: Map<number, MockItem>;
 let itemsByKey: Map<string, MockItem>;
 let originalZotero: unknown;
+let prefValue: unknown;
 
 function registerItem(id: number, item: MockItem): MockItem {
   itemsByID.set(id, item);
@@ -83,11 +89,22 @@ describe("zoteroChildren", function () {
   beforeEach(function () {
     itemsByID = new Map();
     itemsByKey = new Map();
+    prefValue = undefined;
     // 测试里替换 Zotero 全局；真实形状由 zotero-types 提供，此处只喂被调用的 API
     const runtimeGlobals = globalThis as unknown as Record<string, unknown>;
     originalZotero = runtimeGlobals.Zotero;
     runtimeGlobals.Zotero = {
       Attachments: LINK_MODES,
+      Prefs: {
+        get: (key: string) => {
+          assert.equal(
+            key,
+            "extensions.zotero.bibtexclean.deleteConcurrency",
+            "写入端只读这一个偏好键",
+          );
+          return prefValue;
+        },
+      },
       Items: {
         get: (id: number) => itemsByID.get(id),
         getByLibraryAndKeyAsync: async (libraryID: number, key: string) => {
@@ -355,7 +372,154 @@ describe("zoteroChildren", function () {
     });
   });
 
+  describe("deleteConcurrency", function () {
+    it("defaults to the built-in value when the pref is unset", function () {
+      assert.equal(deleteConcurrency(), 4);
+    });
+
+    it("defaults when the pref is not a number", function () {
+      prefValue = "many";
+      assert.equal(deleteConcurrency(), 4);
+    });
+
+    it("clamps the pref into [1, 20]", function () {
+      prefValue = 0;
+      assert.equal(deleteConcurrency(), 1);
+      prefValue = -5;
+      assert.equal(deleteConcurrency(), 1);
+      prefValue = 2.7;
+      assert.equal(deleteConcurrency(), 2);
+      prefValue = 999;
+      assert.equal(deleteConcurrency(), 20);
+    });
+  });
+
   describe("moveCandidatesToTrash", function () {
+    function registerNotes(
+      keys: string[],
+      saveHook?: () => void | Promise<void>,
+    ): void {
+      keys.forEach((key, index) => {
+        registerItem(
+          index + 1,
+          createMockItem({ key, kind: "note", saveHook }),
+        );
+      });
+    }
+
+    /**
+     * 目标运行时是 firefox115（Gecko 115），`Promise.withResolvers`（Fx 119+）
+     * 不可用，因此这里用 executor 形式建可控的 gate。
+     */
+    function createGate(): { promise: Promise<void>; release: () => void } {
+      let release!: () => void;
+      const promise = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return { promise, release };
+    }
+
+    /** 只推进微任务，不依赖真实时间。 */
+    async function flushMicrotasks(times = 8): Promise<void> {
+      for (let tick = 0; tick < times; tick += 1) {
+        await Promise.resolve();
+      }
+    }
+
+    it("deletes up to the configured number of items in parallel", async function () {
+      prefValue = 2;
+      const keys = ["A1", "A2", "A3", "A4"];
+      const releases: Array<() => void> = [];
+      let inFlight = 0;
+      let maxInFlight = 0;
+      registerNotes(keys, () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        const gate = createGate();
+        releases.push(() => {
+          inFlight -= 1;
+          gate.release();
+        });
+        return gate.promise;
+      });
+
+      const running = moveCandidatesToTrash(
+        keys.map((key) => candidateOf(key)),
+      );
+      await flushMicrotasks();
+      assert.equal(inFlight, 2, "第一批同时进行两次删除");
+
+      while (releases.length > 0) {
+        releases.shift()!();
+        await flushMicrotasks();
+      }
+      const result = await running;
+
+      assert.equal(maxInFlight, 2, "并发数不超过偏好设置");
+      assert.deepEqual(
+        result.succeeded.map((candidate) => candidate.itemKey),
+        keys,
+      );
+      assert.deepEqual(result.failed, []);
+    });
+
+    it("deletes one at a time when the pref is 1", async function () {
+      prefValue = 1;
+      const keys = ["A1", "A2", "A3"];
+      const releases: Array<() => void> = [];
+      registerNotes(keys, () => {
+        const gate = createGate();
+        releases.push(gate.release);
+        return gate.promise;
+      });
+
+      const running = moveCandidatesToTrash(
+        keys.map((key) => candidateOf(key)),
+      );
+      await flushMicrotasks();
+      assert.equal(releases.length, 1, "同一时刻只有一次删除在等待");
+
+      while (releases.length > 0) {
+        releases.shift()!();
+        await flushMicrotasks();
+      }
+      await running;
+
+      assert.deepEqual(
+        keys,
+        ["A1", "A2", "A3"],
+        "三个条目都被处理，只是没有重叠",
+      );
+    });
+
+    it("keeps the batch going when one item in it fails", async function () {
+      prefValue = 2;
+      registerItem(1, createMockItem({ key: "A1", kind: "note" }));
+      registerItem(
+        2,
+        createMockItem({
+          key: "A2",
+          kind: "note",
+          saveError: new Error("save failed"),
+        }),
+      );
+      registerItem(3, createMockItem({ key: "A3", kind: "note" }));
+
+      const result = await moveCandidatesToTrash(
+        ["A1", "A2", "A3"].map((key) => candidateOf(key)),
+      );
+
+      assert.deepEqual(
+        result.succeeded.map((candidate) => candidate.itemKey),
+        ["A1", "A3"],
+      );
+      assert.deepEqual(
+        result.failed.map(({ candidate }) => candidate.itemKey),
+        ["A2"],
+      );
+      assert.match(result.failed[0].error.message, /save failed/);
+    });
+
     it("marks every candidate as deleted and saves it", async function () {
       const item = registerItem(1, createMockItem({ key: "A1", kind: "note" }));
 

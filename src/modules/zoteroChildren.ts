@@ -7,6 +7,13 @@
 
 import { candidateKey, type Candidate } from "./filterCandidates";
 import type { DeleteResult } from "./filterDelete";
+import { chunk } from "../utils/chunk";
+
+/** 删除并发数偏好键（构建时 prefs.js 的键会带上同一前缀）。 */
+const DELETE_CONCURRENCY_PREF =
+  "extensions.zotero.bibtexclean.deleteConcurrency";
+const DEFAULT_DELETE_CONCURRENCY = 4;
+const MAX_DELETE_CONCURRENCY = 20;
 
 /** 链接附件：网页快照（imported_url）与网页链接（linked_url）。 */
 export function isLinkAttachment(item: Zotero.Item): boolean {
@@ -134,8 +141,32 @@ export function collectCandidates(selectedItems: Zotero.Item[]): Candidate[] {
 }
 
 /**
- * 把候选项移入 Zotero 回收站。
- * 逐个处理：单个条目失败不影响其余条目，失败明细交给通知层。
+ * 删除并发数偏好：`extensions.zotero.bibtexclean.deleteConcurrency`。
+ * 非数字或小于 1 时退回 1（逐个删除），上限 20。
+ */
+export function deleteConcurrency(): number {
+  const pref = Zotero.Prefs.get(DELETE_CONCURRENCY_PREF, true);
+  if (typeof pref !== "number" || !Number.isFinite(pref)) {
+    return DEFAULT_DELETE_CONCURRENCY;
+  }
+  return Math.min(Math.max(Math.floor(pref), 1), MAX_DELETE_CONCURRENCY);
+}
+
+async function moveCandidateToTrash(candidate: Candidate): Promise<void> {
+  const item = await Zotero.Items.getByLibraryAndKeyAsync(
+    candidate.libraryID,
+    candidate.itemKey,
+  );
+  if (!item) {
+    throw new Error(`未找到条目 ${candidate.itemKey}`);
+  }
+  item.deleted = true;
+  await item.saveTx();
+}
+
+/**
+ * 把候选项移入 Zotero 回收站，按偏好里的并发数分批执行。
+ * 单个条目失败不影响其余条目，失败明细交给通知层。
  */
 export async function moveCandidatesToTrash(
   candidates: Candidate[],
@@ -143,21 +174,15 @@ export async function moveCandidatesToTrash(
   const succeeded: Candidate[] = [];
   const failed: { candidate: Candidate; error: Error }[] = [];
 
-  for (const candidate of candidates) {
-    try {
-      const item = await Zotero.Items.getByLibraryAndKeyAsync(
-        candidate.libraryID,
-        candidate.itemKey,
-      );
-      if (!item) {
-        throw new Error(`未找到条目 ${candidate.itemKey}`);
+  for (const batch of chunk(candidates, deleteConcurrency())) {
+    const results = await Promise.allSettled(batch.map(moveCandidateToTrash));
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        succeeded.push(batch[index]);
+      } else {
+        failed.push({ candidate: batch[index], error: result.reason as Error });
       }
-      item.deleted = true;
-      await item.saveTx();
-      succeeded.push(candidate);
-    } catch (error) {
-      failed.push({ candidate, error: error as Error });
-    }
+    });
   }
 
   return { succeeded, failed };

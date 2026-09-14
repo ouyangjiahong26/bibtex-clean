@@ -176,6 +176,37 @@ describe("filterSelection", function () {
         state.filter.conditions,
       );
     });
+
+    it("keeps manual selections when the same value is applied again", function () {
+      // 焦点进出下拉框会用同一个值再走一遍 withCondition；
+      // 条件没变就不该按默认规则重算，否则用户手改的勾选会被冲掉。
+      const unchecked = setAllChecked(
+        initialState(candidates),
+        candidates,
+        false,
+      );
+
+      const same = withCondition(unchecked, 0, { value: "" }, candidates);
+
+      assert.deepEqual(same.checkedKeys, []);
+    });
+
+    it("recomputes when the value actually changes", function () {
+      const unchecked = setAllChecked(
+        initialState(candidates),
+        candidates,
+        false,
+      );
+
+      const changed = withCondition(
+        unchecked,
+        0,
+        { value: "超星" },
+        candidates,
+      );
+
+      assert.deepEqual(changed.checkedKeys, [candidateKey(snapshot)]);
+    });
   });
 
   describe("manual selection", function () {

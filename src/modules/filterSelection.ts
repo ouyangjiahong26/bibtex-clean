@@ -73,6 +73,18 @@ export function withCondition(
   patch: Partial<FilterCondition>,
   candidates: Candidate[],
 ): FilterDialogState {
+  const current = state.filter.conditions[index];
+  const changed =
+    current !== undefined &&
+    Object.entries(patch).some(
+      ([name, value]) => current[name as keyof FilterCondition] !== value,
+    );
+  // 条件没变就不重算：重算等于按默认规则重置勾选，而焦点进出下拉框会用同一个值
+  // 再走一遍这里（Zotero 7 上 ztoolkit 的自绘下拉改值后只 blur）。越界的索引同此。
+  if (!changed) {
+    return state;
+  }
+
   const conditions = state.filter.conditions.map((condition, position) =>
     position === index ? { ...condition, ...patch } : condition,
   );

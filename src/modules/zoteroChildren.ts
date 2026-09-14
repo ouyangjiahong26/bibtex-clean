@@ -8,10 +8,10 @@
 import { candidateKey, type Candidate } from "./filterCandidates";
 import type { DeleteResult } from "./filterDelete";
 import { chunk } from "../utils/chunk";
+import { config } from "../../package.json";
 
-/** 删除并发数偏好键（构建时 prefs.js 的键会带上同一前缀）。 */
-const DELETE_CONCURRENCY_PREF =
-  "extensions.zotero.bibtexclean.deleteConcurrency";
+/** 删除并发数偏好键：前缀取自 package.json，构建时 prefs.js 用的是同一个前缀。 */
+const DELETE_CONCURRENCY_PREF = `${config.prefsPrefix}.deleteConcurrency`;
 const DEFAULT_DELETE_CONCURRENCY = 4;
 const MAX_DELETE_CONCURRENCY = 20;
 

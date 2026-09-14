@@ -352,7 +352,7 @@ describe("cleanSession", function () {
       assert.isDefined(errorCall);
     });
 
-    it("throws on invalid state transitions", function () {
+    it("throws on invalid state transitions", async function () {
       const { adapters } = createFakeAdapters();
       const items = asZoteroItems([
         createCleanable("A1", "Paper One", "Smith, John; Doe, Jane"),
@@ -383,7 +383,15 @@ describe("cleanSession", function () {
 
       const idle = CleanWorkflow.fromIdle();
       assert.throws(() => idle.compute(adapters.writer));
-      assert.throws(() => idle.confirm(adapters.dialog));
+
+      // confirm 是 async：非法转移表现为 rejected promise，而非同步抛出。
+      let rejected = false;
+      try {
+        await idle.confirm(adapters.dialog);
+      } catch {
+        rejected = true;
+      }
+      assert.isTrue(rejected, "confirm from Idle should reject");
     });
   });
 

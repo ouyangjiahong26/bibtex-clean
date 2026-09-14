@@ -2,6 +2,12 @@ import { assert } from "chai";
 import { createNotifier } from "../src/utils/notifications";
 import type { NotifierAdapter } from "../src/modules/cleanSession";
 import type { Change } from "../src/modules/changes";
+import type { Locale } from "../src/utils/locale";
+
+/** 通知文案由注入的 Locale 提供，测试里回显 key 以便断言。 */
+const fakeLocale = {
+  getString: (key: string) => `MOCK[${key}]`,
+} satisfies Locale;
 
 /**
  * 验证 createNotifier() 返回 NotifierAdapter，且各方法通过 ProgressWindow
@@ -57,7 +63,7 @@ describe("createNotifier", function () {
   });
 
   it("返回的对象满足 NotifierAdapter 接口", function () {
-    const notifier = createNotifier();
+    const notifier = createNotifier(fakeLocale);
     assert.isFunction(notifier.showSuccess);
     assert.isFunction(notifier.showInfo);
     assert.isFunction(notifier.showErrorDetails);
@@ -65,7 +71,7 @@ describe("createNotifier", function () {
   });
 
   it("showSuccess 使用 recognised progress type", function () {
-    const notifier = createNotifier();
+    const notifier = createNotifier(fakeLocale);
     notifier.showSuccess("Done");
     assert.lengthOf(createdWindows, 1);
     assert.deepEqual(createdWindows[0].createLineCalls, [
@@ -74,7 +80,7 @@ describe("createNotifier", function () {
   });
 
   it("showInfo 使用 recognised progress type", function () {
-    const notifier = createNotifier();
+    const notifier = createNotifier(fakeLocale);
     notifier.showInfo("No changes");
     assert.lengthOf(createdWindows, 1);
     const call = createdWindows[0].createLineCalls[0];
@@ -86,7 +92,7 @@ describe("createNotifier", function () {
   });
 
   it("showErrorDetails 只使用 recognised progress types", function () {
-    const notifier = createNotifier();
+    const notifier = createNotifier(fakeLocale);
     const failed = [
       {
         change: {
@@ -118,7 +124,7 @@ describe("createNotifier", function () {
       undoCalled = true;
     };
 
-    const notifier = createNotifier();
+    const notifier = createNotifier(fakeLocale);
     notifier.showUndoableSuccess("Cleaned", onUndo);
 
     assert.lengthOf(createdWindows, 1);

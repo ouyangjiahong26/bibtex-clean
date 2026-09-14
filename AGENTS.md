@@ -15,7 +15,7 @@
 
 ## AI 贡献标记（强制）
 
-你产出的 issue、PR、评论会被人当成人写的，因此必须自己声明来源。规范全文见 `CONTRIBUTING.md` 的「AI 贡献」。
+你产出的 issue、PR、评论会被人当成人写的，因此必须自己声明来源。规范全文见 `CONTRIBUTING.md` 的 AI 贡献一节。
 
 - **创建 issue / PR**：标题最开头加 `[AI Generated] `，并加 `ai-generated` 标签。
   `gh issue create --title "[AI Generated] ..." --label ai-generated`

@@ -13,6 +13,27 @@
 
 仓库从 `git remote -v` 推断——在克隆目录内运行 `gh` 时会自动完成。
 
+## AI 生成的 issue、PR 与评论
+
+AI 创建的内容必须带 `[AI Generated]` 标记，规范全文见 `CONTRIBUTING.md` 的「AI 贡献」。
+
+- **创建 issue 或 PR**：标题最开头加 `[AI Generated] `，并加 `ai-generated` 标签。
+
+  ```bash
+  gh issue create --title "[AI Generated] ..." --body "..." --label ai-generated
+  gh pr create --title "[AI Generated] ..." --body "..." --label ai-generated
+  ```
+
+- **评论 issue 或 PR**：正文第一个非空行写 `> [AI Generated] 本评论由 AI 生成`。
+
+  ```bash
+  gh issue comment <number> --body "> [AI Generated] 本评论由 AI 生成
+
+  ..."
+  ```
+
+- 编辑标题或评论时保留标记。去掉标记等于把内容伪装成人工产出。
+
 ## 将 Pull request 作为分流入口
 
 **PR 作为请求入口：是。**

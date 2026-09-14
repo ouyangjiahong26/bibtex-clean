@@ -8,9 +8,18 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  # 同一 PR 的新推送取消旧运行；main 上的推送不取消，保证每次合并都有完整记录
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       GITHUB_TOKEN: ${{ secrets.GitHub_TOKEN }}
     steps:
@@ -21,6 +30,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       GITHUB_TOKEN: ${{ secrets.GitHub_TOKEN }}
     steps:
@@ -28,8 +38,11 @@ jobs:
         uses: zotero-plugin-dev/workflows/setup-js@main
       - name: Run Build
         run: npm run build
+      # PR 上的产物只用于当次调试，不上传；main 上的产物保留 7 天供回溯
       - name: Upload build result
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: build-result
           path: .scaffold/build
+          retention-days: 7

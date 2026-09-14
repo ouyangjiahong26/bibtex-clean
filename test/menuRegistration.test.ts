@@ -57,7 +57,7 @@ describe("menuRegistration (right-click menu hook)", function () {
     return menuCalls.find((c) => c.options && c.options.id === id);
   }
 
-  it("registers two menu items under the 'item' context", function () {
+  it("registers three menu items under the 'item' context", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
@@ -65,11 +65,13 @@ describe("menuRegistration (right-click menu hook)", function () {
       fakeLocale,
       () => {},
       () => {},
+      () => {},
     );
 
-    assert.lengthOf(menuCalls, 2, "expected exactly two Menu.register calls");
+    assert.lengthOf(menuCalls, 3, "expected exactly three Menu.register calls");
     assert.equal(menuCalls[0].target, "item");
     assert.equal(menuCalls[1].target, "item");
+    assert.equal(menuCalls[2].target, "item");
   });
 
   it("registers 'clean' menu item with the expected id, tag, and label", function () {
@@ -78,6 +80,7 @@ describe("menuRegistration (right-click menu hook)", function () {
     registerItemMenu(
       mockStore,
       fakeLocale,
+      () => {},
       () => {},
       () => {},
     );
@@ -103,6 +106,7 @@ describe("menuRegistration (right-click menu hook)", function () {
       fakeLocale,
       () => {},
       () => {},
+      () => {},
     );
 
     const undoItem = callsById("zotero-itemmenu-bibtexclean-undo");
@@ -118,12 +122,42 @@ describe("menuRegistration (right-click menu hook)", function () {
     );
   });
 
+  it("registers 'filter delete' menu item with the expected id, tag, and label", function () {
+    const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
+    const fakeLocale = createFakeLocale();
+    registerItemMenu(
+      mockStore,
+      fakeLocale,
+      () => {},
+      () => {},
+      () => {},
+    );
+
+    const filterDeleteItem = callsById(
+      "zotero-itemmenu-bibtexclean-filter-delete",
+    );
+    assert.isDefined(
+      filterDeleteItem,
+      "filter delete menu item with id 'zotero-itemmenu-bibtexclean-filter-delete' must be registered",
+    );
+    assert.equal(filterDeleteItem!.options.tag, "menuitem");
+    assert.equal(
+      filterDeleteItem!.options.label,
+      "FAKE[menuitem-filter-delete]",
+    );
+    assert.isFunction(
+      filterDeleteItem!.options.commandListener,
+      "filter delete menu item must expose a commandListener",
+    );
+  });
+
   it("'undo' menu item is disabled when store has no undo", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
       mockStore,
       fakeLocale,
+      () => {},
       () => {},
       () => {},
     );
@@ -148,6 +182,7 @@ describe("menuRegistration (right-click menu hook)", function () {
       fakeLocale,
       () => {},
       () => {},
+      () => {},
     );
 
     const undoItem = callsById("zotero-itemmenu-bibtexclean-undo");
@@ -158,9 +193,10 @@ describe("menuRegistration (right-click menu hook)", function () {
     );
   });
 
-  it("clicking 'clean' invokes the onClean callback, clicking 'undo' invokes the onUndo callback", function () {
+  it("clicking the menu items invokes their callbacks", function () {
     let cleanCalled = 0;
     let undoCalled = 0;
+    let filterDeleteCalled = 0;
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
 
@@ -173,18 +209,31 @@ describe("menuRegistration (right-click menu hook)", function () {
       () => {
         undoCalled += 1;
       },
+      () => {
+        filterDeleteCalled += 1;
+      },
     );
 
     const cleanItem = callsById("zotero-itemmenu-bibtexclean-clean");
     const undoItem = callsById("zotero-itemmenu-bibtexclean-undo");
+    const filterDeleteItem = callsById(
+      "zotero-itemmenu-bibtexclean-filter-delete",
+    );
     assert.isDefined(cleanItem);
     assert.isDefined(undoItem);
+    assert.isDefined(filterDeleteItem);
 
     cleanItem!.options.commandListener();
     undoItem!.options.commandListener();
+    filterDeleteItem!.options.commandListener();
     cleanItem!.options.commandListener();
 
     assert.equal(cleanCalled, 2, "clean callback should fire on each click");
     assert.equal(undoCalled, 1, "undo callback should fire on click");
+    assert.equal(
+      filterDeleteCalled,
+      1,
+      "filter delete callback should fire on click",
+    );
   });
 });

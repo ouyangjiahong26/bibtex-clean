@@ -2,6 +2,7 @@ import { assert } from "chai";
 import { createNotifier } from "../src/utils/notifications";
 import type { NotifierAdapter } from "../src/modules/cleanSession";
 import type { Change } from "../src/modules/changes";
+import type { Candidate } from "../src/modules/filterCandidates";
 import type { Locale } from "../src/utils/locale";
 
 /** 通知文案由注入的 Locale 提供，测试里回显 key 以便断言。 */
@@ -144,6 +145,57 @@ describe("createNotifier", function () {
     // 验证 addDescription 被调用，说明 undo 链接已注入
     assert.isNotEmpty(win.descriptionTexts);
     assert.match(win.descriptionTexts[0], /message-undo/);
+  });
+
+  it("返回的对象同时满足筛选删除流程的通知接口", function () {
+    const notifier = createNotifier(fakeLocale);
+    assert.isFunction(notifier.showDeleteSuccess);
+    assert.isFunction(notifier.showDeleteErrorDetails);
+  });
+
+  it("showDeleteSuccess 在给定 detail 时追加一行说明", function () {
+    const notifier = createNotifier(fakeLocale);
+    notifier.showDeleteSuccess("Deleted 2 items", "Snapshot stays on disk");
+
+    assert.lengthOf(createdWindows, 1);
+    assert.deepEqual(
+      createdWindows[0].createLineCalls.map((call) => call.text),
+      ["Deleted 2 items", "Snapshot stays on disk"],
+    );
+    assert.equal(createdWindows[0].createLineCalls[0].type, "success");
+  });
+
+  it("showDeleteSuccess 不带 detail 时只输出一行", function () {
+    const notifier = createNotifier(fakeLocale);
+    notifier.showDeleteSuccess("Deleted 1 item");
+
+    assert.lengthOf(createdWindows, 1);
+    assert.lengthOf(createdWindows[0].createLineCalls, 1);
+  });
+
+  it("showDeleteErrorDetails 逐条列出失败的子条目，且只用 recognised progress type", function () {
+    const candidate: Candidate = {
+      itemKey: "NOTE1",
+      libraryID: 1,
+      kind: "note",
+      title: "阅读笔记",
+      parentTitle: "论文一",
+    };
+    const notifier = createNotifier(fakeLocale);
+    notifier.showDeleteErrorDetails([
+      { candidate, error: new Error("save failed") },
+    ]);
+
+    assert.lengthOf(createdWindows, 1);
+    const texts = createdWindows[0].createLineCalls.map((call) => call.text);
+    assert.equal(texts[0], "MOCK[message-error-delete-failed]");
+    assert.match(texts[1] ?? "", /阅读笔记: save failed/);
+    for (const call of createdWindows[0].createLineCalls) {
+      assert.isTrue(
+        isRecognisedProgressType(call.type, call.icon),
+        `type=${call.type} icon=${call.icon} should not fall back to empty icon`,
+      );
+    }
   });
 });
 

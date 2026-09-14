@@ -4,12 +4,17 @@
 
 import type { Change } from "../modules/changes";
 import type { NotifierAdapter } from "../modules/cleanSession";
+import type { Candidate } from "../modules/filterCandidates";
+import type { DeleteNotifierAdapter } from "../modules/filterDelete";
 import type { Locale } from "./locale";
 
 /**
  * 创建真实的 NotifierAdapter，底层使用 ztoolkit.ProgressWindow。
+ * 同时满足清理流程与筛选删除流程的通知接口。
  */
-export function createNotifier(locale: Locale): NotifierAdapter {
+export function createNotifier(
+  locale: Locale,
+): NotifierAdapter & DeleteNotifierAdapter {
   const addonName = addon.data.config.addonName;
 
   function showSuccess(text: string): void {
@@ -73,5 +78,40 @@ export function createNotifier(locale: Locale): NotifierAdapter {
     }, 100);
   }
 
-  return { showInfo, showSuccess, showErrorDetails, showUndoableSuccess };
+  function showDeleteSuccess(text: string, detail?: string): void {
+    const progressWindow = new ztoolkit.ProgressWindow(addonName);
+    progressWindow.createLine({ text, type: "success" });
+    if (detail) {
+      progressWindow.createLine({ text: detail, type: "default" });
+    }
+    progressWindow.show();
+  }
+
+  function showDeleteErrorDetails(
+    failed: { candidate: Candidate; error: Error }[],
+  ): void {
+    const progressWindow = new ztoolkit.ProgressWindow(addonName);
+    progressWindow.createLine({
+      text: locale.getString("message-error-delete-failed", {
+        args: { count: String(failed.length) },
+      }),
+      type: "fail",
+    });
+    for (const { candidate, error } of failed) {
+      progressWindow.createLine({
+        text: `${candidate.title}: ${error.message}`,
+        type: "default",
+      });
+    }
+    progressWindow.show();
+  }
+
+  return {
+    showInfo,
+    showSuccess,
+    showErrorDetails,
+    showUndoableSuccess,
+    showDeleteSuccess,
+    showDeleteErrorDetails,
+  };
 }

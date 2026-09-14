@@ -1,12 +1,15 @@
 import { assert } from "chai";
+import type { TagElementProps } from "zotero-plugin-toolkit";
 import {
   FILTER_DIALOG_DATA_KEYS,
   FILTER_DIALOG_IDS,
   FILTER_DIALOG_ROLES,
-  renderCandidateRowsHtml,
-  renderConditionRowsHtml,
+  buildCandidateRowItems,
+  buildCandidateRows,
+  buildConditionRowItems,
+  buildConditionRows,
+  buildFilterDialogContent,
   renderFilterDialog,
-  renderFilterDialogHtml,
   type FilterDialogData,
 } from "../src/modules/filterDialog";
 import {
@@ -52,6 +55,15 @@ const candidates: Candidate[] = [snapshot, note];
 
 function view(state: FilterDialogState): FilterDialogData {
   return renderFilterDialog(candidates, state, mockGetString);
+}
+
+/** 展开元素树，便于按 tag/id/属性查找。 */
+function flatten(props: TagElementProps): TagElementProps[] {
+  return [props, ...(props.children ?? []).flatMap(flatten)];
+}
+
+function attr(props: TagElementProps, name: string): unknown {
+  return props.attributes?.[name];
 }
 
 describe("filterDialog", function () {
@@ -177,19 +189,37 @@ describe("filterDialog", function () {
     });
   });
 
-  describe("renderCandidateRowsHtml", function () {
+  describe("buildCandidateRowItems", function () {
     it("renders a checkbox, badge, title and parent title per row", function () {
-      const html = renderCandidateRowsHtml(view(initialState(candidates)));
+      const items = buildCandidateRowItems(view(initialState(candidates)));
 
-      assert.include(html, 'data-key="1\u0000ATT1"');
-      assert.include(html, 'data-key="1\u0000NOTE1"');
-      assert.include(html, "dialog-filter-kind-link-attachment");
-      assert.include(html, "超星电子书");
-      assert.include(html, "论文一");
-      assert.include(html, "checked");
+      assert.lengthOf(items, 2);
+      const [first, second] = items;
+      const checkbox = first.children?.find(
+        (child) => child.tag === "checkbox",
+      );
+      assert.equal(
+        attr(checkbox!, FILTER_DIALOG_DATA_KEYS.candidate),
+        "1\u0000ATT1",
+      );
+      assert.isTrue(attr(checkbox!, "checked"));
+
+      const labels = first.children?.filter((child) => child.tag === "label");
+      assert.deepEqual(
+        labels?.map((label) => attr(label, "value")),
+        ["dialog-filter-kind-link-attachment", "超星电子书", "论文一"],
+      );
+
+      const secondCheckbox = second.children?.find(
+        (child) => child.tag === "checkbox",
+      );
+      assert.equal(
+        attr(secondCheckbox!, FILTER_DIALOG_DATA_KEYS.candidate),
+        "1\u0000NOTE1",
+      );
     });
 
-    it("omits the checked attribute for unselected rows", function () {
+    it("leaves unchecked rows without a checked attribute", function () {
       const state = withCondition(
         initialState(candidates),
         0,
@@ -197,9 +227,12 @@ describe("filterDialog", function () {
         candidates,
       );
 
-      const html = renderCandidateRowsHtml(view(state));
-      assert.notInclude(html, "checked");
-      assert.include(html, 'data-key="1\u0000NOTE1"');
+      const items = buildCandidateRowItems(view(state));
+      assert.lengthOf(items, 1);
+      const checkbox = items[0].children?.find(
+        (child) => child.tag === "checkbox",
+      );
+      assert.isFalse(attr(checkbox!, "checked"));
     });
 
     it("shows the empty state instead of rows", function () {
@@ -210,13 +243,13 @@ describe("filterDialog", function () {
         candidates,
       );
 
-      const html = renderCandidateRowsHtml(view(state));
-      assert.include(html, "candidate-empty");
-      assert.include(html, "dialog-filter-empty");
-      assert.notInclude(html, "candidate-row");
+      const items = buildCandidateRowItems(view(state));
+      assert.lengthOf(items, 1);
+      assert.equal(items[0].tag, "label");
+      assert.equal(attr(items[0], "value"), "dialog-filter-empty");
     });
 
-    it("escapes candidate text", function () {
+    it("keeps candidate text verbatim (no HTML escaping needed for attributes)", function () {
       const nasty: Candidate = {
         itemKey: "ATT9",
         libraryID: 1,
@@ -226,18 +259,28 @@ describe("filterDialog", function () {
         snapshot: false,
       };
 
-      const html = renderCandidateRowsHtml(
-        renderFilterDialog([nasty], initialState([nasty]), mockGetString),
+      const data = renderFilterDialog(
+        [nasty],
+        initialState([nasty]),
+        mockGetString,
+      );
+      const labels = buildCandidateRowItems(data)[0].children?.filter(
+        (child) => child.tag === "label",
       );
 
-      assert.notInclude(html, "<script>");
-      assert.include(html, "&lt;script&gt;");
-      assert.include(html, "论文 &amp; 笔记");
+      assert.deepEqual(
+        labels?.map((label) => attr(label, "value")),
+        [
+          "dialog-filter-kind-link-attachment",
+          "<script>alert('x')</script>",
+          "论文 & 笔记",
+        ],
+      );
     });
   });
 
-  describe("renderConditionRowsHtml", function () {
-    it("renders one row per condition with the current values selected", function () {
+  describe("buildConditionRowItems", function () {
+    it("builds a menulist pair, a textbox and a remove button per row", function () {
       const state = withCondition(
         initialState(candidates),
         0,
@@ -245,44 +288,110 @@ describe("filterDialog", function () {
         candidates,
       );
 
-      const html = renderConditionRowsHtml(view(state));
+      const items = buildConditionRowItems(view(state));
+      assert.lengthOf(items, 1);
+      const row = items[0];
+      assert.equal(attr(row, "data-index"), "0");
 
-      assert.include(html, 'value="note" selected');
-      assert.include(html, 'value="notContains" selected');
-      assert.include(html, 'value="扫描"');
-      assert.include(html, 'data-index="0"');
-    });
-
-    it("escapes the condition value", function () {
-      const state = withCondition(
-        initialState(candidates),
-        0,
-        { value: '"><script>alert(1)</script>' },
-        candidates,
+      const [fieldList, operatorList] = (row.children ?? []).filter(
+        (child) => child.tag === "menulist",
+      );
+      assert.equal(
+        attr(fieldList, FILTER_DIALOG_DATA_KEYS.role),
+        FILTER_DIALOG_ROLES.field,
+      );
+      assert.equal(
+        attr(operatorList, FILTER_DIALOG_DATA_KEYS.role),
+        FILTER_DIALOG_ROLES.operator,
       );
 
-      const html = renderConditionRowsHtml(view(state));
+      const fieldItems = fieldList.children?.[0].children ?? [];
+      assert.equal(attr(fieldItems[0], "value"), "any");
+      const selectedField = fieldItems.filter((item) => attr(item, "selected"));
+      assert.deepEqual(
+        selectedField.map((item) => attr(item, "value")),
+        ["note"],
+      );
+      const operatorItems = operatorList.children?.[0].children ?? [];
+      assert.deepEqual(
+        operatorItems
+          .filter((item) => attr(item, "selected"))
+          .map((item) => attr(item, "value")),
+        ["notContains"],
+      );
 
-      assert.notInclude(html, "<script>");
-      assert.include(html, "&lt;script&gt;");
+      const textbox = (row.children ?? []).find(
+        (child) => child.tag === "textbox",
+      );
+      assert.equal(attr(textbox, "value"), "扫描");
+      assert.equal(
+        attr(textbox, "placeholder"),
+        "dialog-filter-value-placeholder",
+      );
+
+      const removeButton = (row.children ?? []).find(
+        (child) => child.tag === "button",
+      );
+      assert.equal(
+        attr(removeButton, FILTER_DIALOG_DATA_KEYS.role),
+        FILTER_DIALOG_ROLES.removeCondition,
+      );
+      assert.equal(
+        attr(removeButton, "label"),
+        "dialog-filter-remove-condition",
+      );
     });
   });
 
-  describe("renderFilterDialogHtml", function () {
+  describe("buildFilterDialogContent", function () {
     it("wires the interactive containers and controls", function () {
-      const html = renderFilterDialogHtml(view(initialState(candidates)));
+      const content = buildFilterDialogContent(view(initialState(candidates)));
+      const nodes = flatten(content);
 
-      assert.include(html, 'id="bibtex-clean-filter-root"');
-      assert.include(html, 'id="bibtex-clean-conditions"');
-      assert.include(html, 'id="bibtex-clean-candidate-list"');
-      assert.include(html, 'id="bibtex-clean-checked-summary"');
-      assert.include(html, 'id="bibtex-clean-add-condition"');
-      assert.include(html, 'id="bibtex-clean-select-all"');
-      assert.include(html, 'id="bibtex-clean-select-none"');
-      assert.include(html, 'data-kind="link-attachment"');
-      assert.include(html, 'data-kind="note"');
-      assert.include(html, 'data-match="all"');
-      assert.include(html, "<style>");
+      assert.equal(content.id, FILTER_DIALOG_IDS.root);
+      for (const id of [
+        FILTER_DIALOG_IDS.conditions,
+        FILTER_DIALOG_IDS.candidateList,
+        FILTER_DIALOG_IDS.checkedSummary,
+        FILTER_DIALOG_IDS.addCondition,
+        FILTER_DIALOG_IDS.selectAll,
+        FILTER_DIALOG_IDS.selectNone,
+      ]) {
+        assert.isDefined(
+          nodes.find((node) => node.id === id),
+          `元素树里应有 id=${id}`,
+        );
+      }
+
+      const kinds = nodes.filter(
+        (node) =>
+          node.tag === "checkbox" && attr(node, FILTER_DIALOG_DATA_KEYS.kind),
+      );
+      assert.deepEqual(
+        kinds.map((node) => [
+          attr(node, FILTER_DIALOG_DATA_KEYS.kind),
+          attr(node, "checked"),
+        ]),
+        [
+          ["link-attachment", true],
+          ["note", true],
+        ],
+      );
+
+      const radios = nodes.filter(
+        (node) =>
+          node.tag === "radio" && attr(node, FILTER_DIALOG_DATA_KEYS.match),
+      );
+      assert.deepEqual(
+        radios.map((node) => [
+          attr(node, FILTER_DIALOG_DATA_KEYS.match),
+          attr(node, "selected"),
+        ]),
+        [
+          ["all", true],
+          ["any", false],
+        ],
+      );
     });
 
     it("shows the checked summary and empty state text", function () {
@@ -293,42 +402,56 @@ describe("filterDialog", function () {
         candidates,
       );
 
-      const html = renderFilterDialogHtml(view(state));
-
-      assert.include(html, "dialog-filter-checked-summary:count=0");
-      assert.include(html, "dialog-filter-empty");
-    });
-  });
-
-  describe("对话框 DOM 契约", function () {
-    it("事件绑定查找的 id 都出现在渲染出的 HTML 里", function () {
-      const html = renderFilterDialogHtml(view(initialState(candidates)));
-      // 确认/取消按钮由 ztoolkit.Dialog 创建，不出现在内容 HTML 里
-      const contentIds = Object.values(FILTER_DIALOG_IDS).filter(
-        (id) =>
-          id !== FILTER_DIALOG_IDS.confirmButton &&
-          id !== FILTER_DIALOG_IDS.cancelButton,
+      const content = buildFilterDialogContent(view(state));
+      const nodes = flatten(content);
+      const summary = nodes.find(
+        (node) => node.id === FILTER_DIALOG_IDS.checkedSummary,
+      );
+      const empty = nodes.find(
+        (node) =>
+          node.tag === "label" && attr(node, "value") === "dialog-filter-empty",
       );
 
-      for (const id of contentIds) {
-        assert.include(html, `id="${id}"`);
+      assert.equal(
+        attr(summary!, "value"),
+        "dialog-filter-checked-summary:count=0",
+      );
+      assert.isDefined(empty);
+    });
+
+    it("marks the clicking targets with the data-* attributes the wiring reads", function () {
+      const content = buildFilterDialogContent(view(initialState(candidates)));
+      const nodes = flatten(content);
+
+      for (const name of Object.values(FILTER_DIALOG_DATA_KEYS)) {
+        assert.isTrue(
+          nodes.some((node) => attr(node, name) !== undefined),
+          `元素树里应有 ${name}`,
+        );
       }
-      assert.lengthOf(
-        contentIds,
-        7,
-        "新增 id 常量时必须同步内容 HTML 与事件绑定",
-      );
-    });
-
-    it("条件行与候选行带齐事件代理读取的 data-* 标记", function () {
-      const html = renderFilterDialogHtml(view(initialState(candidates)));
-
-      assert.include(html, `data-${FILTER_DIALOG_DATA_KEYS.kind}=`);
-      assert.include(html, `data-${FILTER_DIALOG_DATA_KEYS.match}=`);
-      assert.include(html, `data-${FILTER_DIALOG_DATA_KEYS.candidate}=`);
       for (const role of Object.values(FILTER_DIALOG_ROLES)) {
-        assert.include(html, `data-role="${role}"`);
+        assert.isTrue(
+          nodes.some(
+            (node) => attr(node, FILTER_DIALOG_DATA_KEYS.role) === role,
+          ),
+          `元素树里应有 role=${role}`,
+        );
       }
+    });
+
+    it("keeps the candidate list container reusable for repainting", function () {
+      const data = view(initialState(candidates));
+
+      assert.equal(
+        buildCandidateRows(data).id,
+        FILTER_DIALOG_IDS.candidateList,
+      );
+      assert.equal(buildConditionRows(data).id, FILTER_DIALOG_IDS.conditions);
+      assert.lengthOf(
+        buildCandidateRows(data).children ?? [],
+        2,
+        "容器内是候选行，重绘时可整体替换",
+      );
     });
   });
 });

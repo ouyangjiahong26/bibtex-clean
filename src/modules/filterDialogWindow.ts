@@ -1,10 +1,11 @@
 /**
  * 筛选删除对话框的窗口层：ztoolkit.Dialog + 事件绑定与重绘。
  *
- * 纯数据与 HTML 在 filterDialog.ts；这一层做 DOM 事件代理，只能在 Zotero
- * 运行时里验证。
+ * 纯数据与元素树在 filterDialog.ts；这一层用 ztoolkit.createElement 建树，
+ * 事件代理读 data-* 属性与控件的 value，因此只能在 Zotero 运行时里验证。
  */
 
+import type { TagElementProps } from "zotero-plugin-toolkit";
 import type {
   Candidate,
   CandidateKind,
@@ -16,10 +17,10 @@ import {
   FILTER_DIALOG_DATA_KEYS,
   FILTER_DIALOG_IDS,
   FILTER_DIALOG_ROLES,
-  renderCandidateRowsHtml,
-  renderConditionRowsHtml,
+  buildCandidateRowItems,
+  buildConditionRowItems,
+  buildFilterDialogContent,
   renderFilterDialog,
-  renderFilterDialogHtml,
 } from "./filterDialog";
 import {
   addCondition,
@@ -36,18 +37,19 @@ import {
 import { getString, type StringGetter } from "../utils/locale";
 import { waitForDialogClose } from "../utils/dialog";
 
-// ── 对话框入口 ──────────────────────────────────────────────────
-
 type FilterDialogDataObject = {
   _lastButtonId?: string;
   _result?: Candidate[];
   loadCallback?: () => void;
 };
 
+/** menulist 与 textbox 都用 value 承载当前值。 */
+type ValueElement = Element & { value: string };
+
 /** 从事件目标反查所在条件行的序号；找不到时返回 -1，纯函数会忽略它。 */
-function conditionIndexOf(target: HTMLElement): number {
-  const row = target.closest(".condition-row") as HTMLElement | null;
-  return row?.dataset.index === undefined ? -1 : Number(row.dataset.index);
+function conditionIndexOf(target: Element): number {
+  const index = target.closest(".condition-row")?.getAttribute("data-index");
+  return index === null || index === undefined ? -1 : Number(index);
 }
 
 /**
@@ -69,22 +71,7 @@ export async function openFilterDeleteDialog(
   dialog.addCell(
     0,
     0,
-    {
-      tag: "div",
-      namespace: "html",
-      id: "bibtex-clean-filter-content",
-      styles: {
-        width: "720px",
-        maxHeight: "560px",
-        overflowY: "auto",
-        padding: "12px 16px",
-      },
-      properties: {
-        innerHTML: renderFilterDialogHtml(
-          renderFilterDialog(candidates, state, fn),
-        ),
-      },
-    },
+    buildFilterDialogContent(renderFilterDialog(candidates, state, fn)),
     true,
   );
 
@@ -104,34 +91,39 @@ export async function openFilterDeleteDialog(
 
   dialogData.loadCallback = () => {
     const doc = dialog.window?.document;
-    const root = doc?.getElementById(
-      FILTER_DIALOG_IDS.root,
-    ) as HTMLElement | null;
-    const confirm = doc?.getElementById(
-      FILTER_DIALOG_IDS.confirmButton,
-    ) as HTMLButtonElement | null;
-    if (!doc || !root || !confirm) {
+    if (!doc) {
+      Zotero.debug("[BibTeX Clean] 筛选删除对话框没有 document，跳过事件绑定");
       return;
     }
-    const conditions = doc.getElementById(
-      FILTER_DIALOG_IDS.conditions,
-    ) as HTMLElement;
-    const list = doc.getElementById(
-      FILTER_DIALOG_IDS.candidateList,
-    ) as HTMLElement;
-    const summary = doc.getElementById(
-      FILTER_DIALOG_IDS.checkedSummary,
-    ) as HTMLElement;
+    const root = doc.getElementById(FILTER_DIALOG_IDS.root);
+    const confirm = doc.getElementById(
+      FILTER_DIALOG_IDS.confirmButton,
+    ) as HTMLButtonElement | null;
+    const conditions = doc.getElementById(FILTER_DIALOG_IDS.conditions);
+    const list = doc.getElementById(FILTER_DIALOG_IDS.candidateList);
+    const summary = doc.getElementById(FILTER_DIALOG_IDS.checkedSummary);
+    if (!root || !confirm || !conditions || !list || !summary) {
+      Zotero.debug(
+        `[BibTeX Clean] 筛选删除对话框元素缺失：root=${!!root} confirm=${!!confirm} conditions=${!!conditions} list=${!!list} summary=${!!summary}`,
+      );
+      return;
+    }
 
     // 条件行只在增删时重绘：重绘输入框会丢焦点与光标位置。
     const repaint = (patchConditions: boolean) => {
       const data = renderFilterDialog(candidates, state, fn);
-      list.innerHTML = renderCandidateRowsHtml(data);
-      summary.textContent = data.checkedSummary;
+      const rows = ztoolkit.UI.createElement(doc, "fragment", {
+        children: buildCandidateRowItems(data) as TagElementProps[],
+      });
+      list.replaceChildren(rows);
+      summary.setAttribute("value", data.checkedSummary);
       confirm.innerHTML = data.confirmLabel;
       confirm.disabled = data.checkedCount === 0;
       if (patchConditions) {
-        conditions.innerHTML = renderConditionRowsHtml(data);
+        const conditionRows = ztoolkit.UI.createElement(doc, "fragment", {
+          children: buildConditionRowItems(data) as TagElementProps[],
+        });
+        conditions.replaceChildren(conditionRows);
       }
     };
 
@@ -140,25 +132,34 @@ export async function openFilterDeleteDialog(
       repaint(patchConditions);
     };
 
-    root.addEventListener("change", (event: Event) => {
-      const target = event.target as HTMLInputElement;
-      const fields = target.dataset;
-      const role = fields[FILTER_DIALOG_DATA_KEYS.role];
-      const kind = fields[FILTER_DIALOG_DATA_KEYS.kind];
-      const match = fields[FILTER_DIALOG_DATA_KEYS.match];
-      const key = fields[FILTER_DIALOG_DATA_KEYS.candidate];
-      if (kind !== undefined) {
+    const readValue = (target: Element): string =>
+      (target as ValueElement).value ?? "";
+
+    root.addEventListener("command", (event: Event) => {
+      const target = event.target as Element;
+      const role = target.getAttribute(FILTER_DIALOG_DATA_KEYS.role);
+      const kind = target.getAttribute(FILTER_DIALOG_DATA_KEYS.kind);
+      const match = target.getAttribute(FILTER_DIALOG_DATA_KEYS.match);
+      const key = target.getAttribute(FILTER_DIALOG_DATA_KEYS.candidate);
+
+      if (kind !== null) {
         apply(toggleKind(state, kind as CandidateKind, candidates));
-      } else if (match !== undefined) {
+      } else if (match !== null) {
         apply(withMatchMode(state, match as MatchMode, candidates));
-      } else if (key !== undefined) {
+      } else if (key !== null) {
         apply(toggleChecked(state, key));
+      } else if (target.id === FILTER_DIALOG_IDS.addCondition) {
+        apply(addCondition(state, candidates), true);
+      } else if (target.id === FILTER_DIALOG_IDS.selectAll) {
+        apply(setAllChecked(state, candidates, true));
+      } else if (target.id === FILTER_DIALOG_IDS.selectNone) {
+        apply(setAllChecked(state, candidates, false));
       } else if (role === FILTER_DIALOG_ROLES.field) {
         apply(
           withCondition(
             state,
             conditionIndexOf(target),
-            { field: target.value as FilterField },
+            { field: readValue(target) as FilterField },
             candidates,
           ),
         );
@@ -167,17 +168,27 @@ export async function openFilterDeleteDialog(
           withCondition(
             state,
             conditionIndexOf(target),
-            { operator: target.value as FilterOperator },
+            { operator: readValue(target) as FilterOperator },
             candidates,
           ),
+        );
+      } else if (role === FILTER_DIALOG_ROLES.removeCondition) {
+        apply(
+          removeCondition(state, conditionIndexOf(target), candidates),
+          true,
+        );
+      } else {
+        Zotero.debug(
+          `[BibTeX Clean] 筛选删除对话框收到未处理的 command：id=${target.id} role=${role}`,
         );
       }
     });
 
-    root.addEventListener("input", (event: Event) => {
-      const target = event.target as HTMLInputElement;
+    // XUL textbox 在输入时派发 input，失焦时派发 change；两者都按值处理，幂等。
+    const onValueChanged = (event: Event) => {
+      const target = event.target as Element;
       if (
-        target.dataset[FILTER_DIALOG_DATA_KEYS.role] !==
+        target.getAttribute(FILTER_DIALOG_DATA_KEYS.role) !==
         FILTER_DIALOG_ROLES.value
       ) {
         return;
@@ -186,35 +197,15 @@ export async function openFilterDeleteDialog(
         withCondition(
           state,
           conditionIndexOf(target),
-          { value: target.value },
+          { value: readValue(target) },
           candidates,
         ),
       );
-    });
+    };
+    root.addEventListener("input", onValueChanged);
+    root.addEventListener("change", onValueChanged);
 
-    root.addEventListener("click", (event: Event) => {
-      const target = event.target as HTMLElement;
-      switch (target.id) {
-        case FILTER_DIALOG_IDS.addCondition:
-          apply(addCondition(state, candidates), true);
-          return;
-        case FILTER_DIALOG_IDS.selectAll:
-          apply(setAllChecked(state, candidates, true));
-          return;
-        case FILTER_DIALOG_IDS.selectNone:
-          apply(setAllChecked(state, candidates, false));
-          return;
-      }
-      if (
-        target.dataset[FILTER_DIALOG_DATA_KEYS.role] ===
-        FILTER_DIALOG_ROLES.removeCondition
-      ) {
-        apply(
-          removeCondition(state, conditionIndexOf(target), candidates),
-          true,
-        );
-      }
-    });
+    repaint(false);
   };
 
   dialog.open(fn("dialog-title-filter-delete"), {

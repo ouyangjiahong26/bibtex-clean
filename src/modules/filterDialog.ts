@@ -1,13 +1,18 @@
 /**
- * 筛选删除对话框的纯数据层与 HTML 层。
+ * 筛选删除对话框的纯数据层与元素树层。
  *
  * 1. renderFilterDialog — 纯数据，给条件区、候选列表与按钮提供文案与行数据
- * 2. renderFilterDialogHtml / renderConditionRowsHtml / renderCandidateRowsHtml — 拼装 HTML
+ * 2. buildFilterDialogContent / buildConditionRows / buildCandidateRows — 生成
+ *    ztoolkit 的 ElementProps 树
  *
- * 打开对话框与 DOM 事件绑定在 filterDialogWindow.ts。
- * 对话框即模拟运行：屏幕上勾选的行就是待删集，条件一变勾选按新的可见集重算。
+ * 控件用原生 XUL（menulist / textbox / checkbox / radio / button）：这个对话框
+ * 是 chrome 里的 XUL 文档，原生 select 的弹出层在 Zotero 7（Gecko 115）上不可用，
+ * ztoolkit 也要为此打补丁；XUL 控件是 Zotero 自己用的那条路。
+ *
+ * 打开对话框与事件绑定在 filterDialogWindow.ts。
  */
 
+import type { TagElementProps } from "zotero-plugin-toolkit";
 import {
   candidateKey,
   filterCandidates,
@@ -20,7 +25,6 @@ import {
 } from "./filterCandidates";
 import type { FilterDialogState } from "./filterSelection";
 import { getString, type StringGetter } from "../utils/locale";
-import { escapeHtml } from "../utils/html";
 
 // ── 结构化数据类型 ──────────────────────────────────────────────
 
@@ -153,7 +157,7 @@ export function renderFilterDialog(
 // ── 对话框 DOM 契约 ─────────────────────────────────────────────
 //
 // 事件绑定靠 id 与 data-* 定位元素，两边各写一份字符串必然漂移，
-// 因此集中在这里，并由 filterDialog.test.ts 断言 HTML 里确实存在这些标记。
+// 因此集中在这里，并由 filterDialog.test.ts 断言元素树里确实存在这些标记。
 
 export const FILTER_DIALOG_IDS = {
   root: "bibtex-clean-filter-root",
@@ -167,12 +171,12 @@ export const FILTER_DIALOG_IDS = {
   cancelButton: "filter-cancel",
 } as const;
 
-/** 事件代理读取的 data-* 键。 */
+/** 事件代理读取的 data-* 属性名。 */
 export const FILTER_DIALOG_DATA_KEYS = {
-  kind: "kind",
-  match: "match",
-  candidate: "key",
-  role: "role",
+  kind: "data-kind",
+  match: "data-match",
+  candidate: "data-key",
+  role: "data-role",
 } as const;
 
 /** 条件行内的控件角色。 */
@@ -183,209 +187,230 @@ export const FILTER_DIALOG_ROLES = {
   removeCondition: "remove-condition",
 } as const;
 
-// ── HTML 拼装 ───────────────────────────────────────────────────
+// ── 元素树 ──────────────────────────────────────────────────────
 
-function renderOptions<T extends string>(
-  options: { value: T; label: string }[],
-  selected: T,
-): string {
-  return options
-    .map(
-      (option) =>
-        `<option value="${escapeHtml(option.value)}"${
-          option.value === selected ? " selected" : ""
-        }>${escapeHtml(option.label)}</option>`,
-    )
-    .join("");
+function menulist(
+  role: string,
+  options: { value: string; label: string }[],
+  selected: string,
+): TagElementProps {
+  return {
+    tag: "menulist",
+    classList: ["filter-select"],
+    attributes: { [FILTER_DIALOG_DATA_KEYS.role]: role },
+    children: [
+      {
+        tag: "menupopup",
+        children: options.map((option) => ({
+          tag: "menuitem",
+          attributes: {
+            label: option.label,
+            value: option.value,
+            selected: option.value === selected,
+          },
+        })),
+      },
+    ],
+  };
 }
 
 /** 条件区：每行是 字段范围 × 运算符 × 值。 */
-export function renderConditionRowsHtml(data: FilterDialogData): string {
-  return data.conditions
-    .map(
-      (condition, index) => `
-    <div class="condition-row" data-index="${index}">
-      <select class="filter-select" data-role="${FILTER_DIALOG_ROLES.field}">${renderOptions(
-        data.fields,
-        condition.field,
-      )}</select>
-      <select class="filter-select" data-role="${FILTER_DIALOG_ROLES.operator}">${renderOptions(
+export function buildConditionRows(data: FilterDialogData): TagElementProps {
+  return {
+    tag: "vbox",
+    id: FILTER_DIALOG_IDS.conditions,
+    children: buildConditionRowItems(data),
+  };
+}
+
+/** 条件行本身，供重绘时替换容器内容。 */
+export function buildConditionRowItems(
+  data: FilterDialogData,
+): TagElementProps[] {
+  return data.conditions.map((condition, index) => ({
+    tag: "hbox",
+    classList: ["condition-row"],
+    attributes: {
+      "data-index": String(index),
+      align: "center",
+    },
+    children: [
+      menulist(FILTER_DIALOG_ROLES.field, data.fields, condition.field),
+      menulist(
+        FILTER_DIALOG_ROLES.operator,
         data.operators,
         condition.operator,
-      )}</select>
-      <input class="filter-input" type="text" data-role="${FILTER_DIALOG_ROLES.value}" value="${escapeHtml(
-        condition.value,
-      )}" placeholder="${escapeHtml(data.valuePlaceholder)}">
-      <button type="button" class="filter-button" data-role="${FILTER_DIALOG_ROLES.removeCondition}">${escapeHtml(
-        data.removeConditionLabel,
-      )}</button>
-    </div>
-  `,
-    )
-    .join("");
+      ),
+      {
+        tag: "textbox",
+        classList: ["filter-input"],
+        attributes: {
+          [FILTER_DIALOG_DATA_KEYS.role]: FILTER_DIALOG_ROLES.value,
+          value: condition.value,
+          placeholder: data.valuePlaceholder,
+          flex: "1",
+        },
+      },
+      {
+        tag: "button",
+        attributes: {
+          [FILTER_DIALOG_DATA_KEYS.role]: FILTER_DIALOG_ROLES.removeCondition,
+          label: data.removeConditionLabel,
+        },
+      },
+    ],
+  }));
 }
 
 /** 候选列表：勾选框 + 类型徽标 + 子项标题 + 父条目标题。 */
-export function renderCandidateRowsHtml(data: FilterDialogData): string {
+export function buildCandidateRows(data: FilterDialogData): TagElementProps {
+  return {
+    tag: "vbox",
+    id: FILTER_DIALOG_IDS.candidateList,
+    classList: ["candidate-list"],
+    styles: { overflowY: "auto", maxHeight: "300px" },
+    children: buildCandidateRowItems(data),
+  };
+}
+
+/** 候选行本身，供重绘时替换容器内容。 */
+export function buildCandidateRowItems(
+  data: FilterDialogData,
+): TagElementProps[] {
   if (data.rows.length === 0) {
-    return `<div class="candidate-empty">${escapeHtml(data.emptyText)}</div>`;
+    return [
+      {
+        tag: "label",
+        classList: ["candidate-empty"],
+        attributes: { value: data.emptyText, flex: "1" },
+        styles: { textAlign: "center", opacity: "0.7" },
+      },
+    ];
   }
-  return data.rows
-    .map(
-      (row) => `
-    <label class="candidate-row">
-      <input type="checkbox" data-${FILTER_DIALOG_DATA_KEYS.candidate}="${escapeHtml(
-        row.key,
-      )}"${row.checked ? " checked" : ""}>
-      <span class="candidate-badge">${escapeHtml(row.kindLabel)}</span>
-      <span class="candidate-title">${escapeHtml(row.title)}</span>
-      <span class="candidate-parent">${escapeHtml(row.parentTitle)}</span>
-    </label>
-  `,
-    )
-    .join("");
+
+  return data.rows.map((row) => ({
+    tag: "hbox",
+    classList: ["candidate-row"],
+    attributes: { align: "center" },
+    children: [
+      {
+        tag: "checkbox",
+        attributes: {
+          [FILTER_DIALOG_DATA_KEYS.candidate]: row.key,
+          checked: row.checked,
+          "aria-label": row.title,
+        },
+      },
+      {
+        tag: "label",
+        classList: ["candidate-badge"],
+        attributes: { value: row.kindLabel },
+      },
+      {
+        tag: "label",
+        classList: ["candidate-title"],
+        attributes: { value: row.title, crop: "end", flex: "1" },
+      },
+      {
+        tag: "label",
+        classList: ["candidate-parent"],
+        attributes: { value: row.parentTitle, crop: "end" },
+        styles: { opacity: "0.7", maxWidth: "240px" },
+      },
+    ],
+  }));
 }
 
 /** 完整对话框内容：条件区 + 候选列表 + 底部计数与批量勾选。 */
-export function renderFilterDialogHtml(data: FilterDialogData): string {
-  const kinds = data.kinds
-    .map(
-      (kind) => `<label class="filter-option">
-        <input type="checkbox" data-${FILTER_DIALOG_DATA_KEYS.kind}="${escapeHtml(
-          kind.value,
-        )}"${kind.checked ? " checked" : ""}> ${escapeHtml(kind.label)}
-      </label>`,
-    )
-    .join("");
-  const matchModes = data.matchModes
-    .map(
-      (mode) => `<label class="filter-option">
-        <input type="radio" name="bibtex-clean-match" data-${
-          FILTER_DIALOG_DATA_KEYS.match
-        }="${escapeHtml(mode.value)}"${
-          mode.checked ? " checked" : ""
-        }> ${escapeHtml(mode.label)}
-      </label>`,
-    )
-    .join("");
-
-  return `
-    <style>
-      .bibtex-clean-filter {
-        font-size: 13px;
-        color: var(--fill-primary, #333);
-      }
-      .filter-controls {
-        border-bottom: 1px solid #eee;
-        padding-bottom: 10px;
-        margin-bottom: 10px;
-      }
-      .filter-line {
-        margin-bottom: 6px;
-      }
-      .filter-label {
-        color: #666;
-        margin-right: 8px;
-      }
-      .filter-option {
-        margin-right: 12px;
-      }
-      .condition-row {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 6px;
-      }
-      .filter-select,
-      .filter-input {
-        padding: 2px 4px;
-      }
-      .filter-input {
-        flex: 1;
-      }
-      .filter-button {
-        padding: 2px 8px;
-      }
-      .candidate-list {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid #eee;
-        border-radius: 4px;
-      }
-      .candidate-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 8px;
-        border-bottom: 1px solid #f2f2f2;
-      }
-      .candidate-row:hover {
-        background: #fafafa;
-      }
-      .candidate-badge {
-        flex: none;
-        font-size: 11px;
-        color: #666;
-        border: 1px solid #ddd;
-        border-radius: 3px;
-        padding: 0 4px;
-      }
-      .candidate-title {
-        flex: 1;
-        font-weight: 600;
-      }
-      .candidate-parent {
-        flex: none;
-        color: #888;
-        max-width: 240px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .candidate-empty {
-        padding: 16px;
-        color: #888;
-        text-align: center;
-      }
-      .filter-footer {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding-top: 10px;
-      }
-      .filter-footer .checked-summary {
-        flex: 1;
-        color: #666;
-      }
-    </style>
-    <div class="bibtex-clean-filter" id="${FILTER_DIALOG_IDS.root}">
-      <div class="filter-controls">
-        <div class="filter-line">
-          <span class="filter-label">${escapeHtml(data.typeLabel)}</span>
-          ${kinds}
-        </div>
-        <div class="filter-line">
-          <span class="filter-label">${escapeHtml(data.matchLabel)}</span>
-          ${matchModes}
-        </div>
-        <div id="${FILTER_DIALOG_IDS.conditions}">${renderConditionRowsHtml(data)}</div>
-        <button type="button" class="filter-button" id="${FILTER_DIALOG_IDS.addCondition}">${escapeHtml(
-          data.addConditionLabel,
-        )}</button>
-      </div>
-      <div class="candidate-list" id="${FILTER_DIALOG_IDS.candidateList}">${renderCandidateRowsHtml(
-        data,
-      )}</div>
-      <div class="filter-footer">
-        <span class="checked-summary" id="${FILTER_DIALOG_IDS.checkedSummary}">${escapeHtml(
-          data.checkedSummary,
-        )}</span>
-        <button type="button" class="filter-button" id="${FILTER_DIALOG_IDS.selectAll}">${escapeHtml(
-          data.selectAllLabel,
-        )}</button>
-        <button type="button" class="filter-button" id="${FILTER_DIALOG_IDS.selectNone}">${escapeHtml(
-          data.selectNoneLabel,
-        )}</button>
-      </div>
-    </div>
-  `;
+export function buildFilterDialogContent(
+  data: FilterDialogData,
+): TagElementProps {
+  return {
+    tag: "vbox",
+    id: FILTER_DIALOG_IDS.root,
+    classList: ["bibtex-clean-filter"],
+    attributes: { flex: "1" },
+    styles: { maxHeight: "560px", overflowY: "auto", padding: "12px 16px" },
+    children: [
+      {
+        tag: "vbox",
+        classList: ["filter-controls"],
+        children: [
+          {
+            tag: "hbox",
+            classList: ["filter-line"],
+            attributes: { align: "center" },
+            children: [
+              {
+                tag: "label",
+                classList: ["filter-label"],
+                attributes: { value: data.typeLabel },
+              },
+              ...data.kinds.map((kind) => ({
+                tag: "checkbox",
+                attributes: {
+                  [FILTER_DIALOG_DATA_KEYS.kind]: kind.value,
+                  label: kind.label,
+                  checked: kind.checked,
+                },
+              })),
+            ],
+          },
+          {
+            tag: "hbox",
+            classList: ["filter-line"],
+            attributes: { align: "center" },
+            children: [
+              {
+                tag: "label",
+                classList: ["filter-label"],
+                attributes: { value: data.matchLabel },
+              },
+              {
+                tag: "radiogroup",
+                attributes: { [FILTER_DIALOG_DATA_KEYS.role]: "match" },
+                children: data.matchModes.map((mode) => ({
+                  tag: "radio",
+                  attributes: {
+                    [FILTER_DIALOG_DATA_KEYS.match]: mode.value,
+                    label: mode.label,
+                    selected: mode.checked,
+                  },
+                })),
+              },
+            ],
+          },
+          buildConditionRows(data),
+          {
+            tag: "button",
+            id: FILTER_DIALOG_IDS.addCondition,
+            attributes: { label: data.addConditionLabel },
+          },
+        ],
+      },
+      buildCandidateRows(data),
+      {
+        tag: "hbox",
+        classList: ["filter-footer"],
+        attributes: { align: "center" },
+        children: [
+          {
+            tag: "label",
+            id: FILTER_DIALOG_IDS.checkedSummary,
+            attributes: { value: data.checkedSummary, flex: "1" },
+          },
+          {
+            tag: "button",
+            id: FILTER_DIALOG_IDS.selectAll,
+            attributes: { label: data.selectAllLabel },
+          },
+          {
+            tag: "button",
+            id: FILTER_DIALOG_IDS.selectNone,
+            attributes: { label: data.selectNoneLabel },
+          },
+        ],
+      },
+    ],
+  };
 }

@@ -211,7 +211,9 @@ export async function openFilterDeleteDialog(
   dialog.open(fn("dialog-title-filter-delete"), {
     centerscreen: true,
     resizable: true,
-    fitContent: true,
+    // 不用 fitContent：XUL 盒子在 sizeToContent 下会算成很小的高度，文字显示不全
+    width: 760,
+    height: 560,
   });
 
   await (waitForClose ?? waitForDialogClose)(dialog);

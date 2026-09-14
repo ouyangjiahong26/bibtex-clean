@@ -268,7 +268,9 @@ export function buildCandidateRows(data: FilterDialogData): TagElementProps {
     tag: "vbox",
     id: FILTER_DIALOG_IDS.candidateList,
     classList: ["candidate-list"],
-    styles: { overflowY: "auto", maxHeight: "300px" },
+    // 固定高度而不是 max-height：外层不再用 fitContent，配合 flex 才不会被压成 0
+    attributes: { flex: "1" },
+    styles: { minHeight: "240px", overflowY: "auto" },
     children: buildCandidateRowItems(data),
   };
 }
@@ -330,7 +332,7 @@ export function buildFilterDialogContent(
     id: FILTER_DIALOG_IDS.root,
     classList: ["bibtex-clean-filter"],
     attributes: { flex: "1" },
-    styles: { maxHeight: "560px", overflowY: "auto", padding: "12px 16px" },
+    styles: { padding: "12px 16px", overflowY: "auto" },
     children: [
       {
         tag: "vbox",

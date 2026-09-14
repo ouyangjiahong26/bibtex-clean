@@ -8,8 +8,9 @@
  */
 
 import type { Change } from "./changes";
-import type { Locale } from "../utils/locale";
-import { getString } from "../utils/locale";
+import { getString, type StringGetter } from "../utils/locale";
+import { escapeHtml } from "../utils/html";
+import { waitForDialogClose } from "../utils/dialog";
 
 // ── 结构化数据类型 ──────────────────────────────────────────────
 
@@ -27,11 +28,6 @@ export type DialogData = {
 };
 
 // ── 纯数据渲染 ──────────────────────────────────────────────────
-
-type StringGetter = (
-  key: string,
-  options?: { args?: Record<string, unknown> },
-) => string;
 
 /**
  * 从变更列表计算对话框所需的结构化数据。
@@ -158,35 +154,6 @@ export function renderDialogHtml(data: DialogData): string {
   `;
 }
 
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-// ── waitForClose seam ───────────────────────────────────────────
-
-/**
- * 轮询等待对话框关闭。默认实现，可注入 fake 用于测试。
- */
-function defaultWaitForClose(
-  dialog: InstanceType<ZToolkit["Dialog"]>,
-): Promise<void> {
-  return new Promise<void>((resolve) => {
-    const check = () => {
-      if (dialog.window?.closed) {
-        resolve();
-        return;
-      }
-      setTimeout(check, 100);
-    };
-    check();
-  });
-}
-
 // ── 对话框入口 ──────────────────────────────────────────────────
 
 /**
@@ -241,7 +208,7 @@ export async function openCleaningConfirmationDialog(
     fitContent: true,
   });
 
-  await (waitForClose ?? defaultWaitForClose)(dialog);
+  await (waitForClose ?? waitForDialogClose)(dialog);
 
   return dialogData._lastButtonId === "confirm-clean" ? "confirm" : "cancel";
 }

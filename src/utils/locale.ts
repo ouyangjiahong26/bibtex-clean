@@ -11,6 +11,12 @@ export interface Locale {
   ): string;
 }
 
+/** 供对话框等纯数据层注入的最小 i18n 函数签名。 */
+export type StringGetter = (
+  key: string,
+  options?: { args?: Record<string, unknown> },
+) => string;
+
 /**
  * 创建真实 Locale 实例，底层使用全局 addon.data.locale.current。
  */

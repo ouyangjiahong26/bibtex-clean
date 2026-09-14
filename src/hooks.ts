@@ -6,37 +6,61 @@ import {
   type WriterAdapter,
 } from "./modules/cleanSession";
 import { openCleaningConfirmationDialog } from "./modules/cleaningDialog";
+import {
+  filterDeleteSelectedItems,
+  type FilterDeleteAdapters,
+} from "./modules/filterDelete";
+import { openFilterDeleteDialog } from "./modules/filterDialogWindow";
 import { registerItemMenu } from "./modules/menuRegistration";
 import {
   applyChanges,
   toCleanableItem,
   undoChanges,
 } from "./modules/zoteroWriter";
-import { createLocale, initLocale } from "./utils/locale";
+import {
+  collectCandidates,
+  moveCandidatesToTrash,
+} from "./modules/zoteroChildren";
+import { createLocale, initLocale, type Locale } from "./utils/locale";
 import { createNotifier } from "./utils/notifications";
 import { createZToolkit } from "./utils/ztoolkit";
 
 const store = new CleanSessionStore();
 
-function createAdapters(locale: ReturnType<typeof createLocale>) {
+function createAdapters(locale: Locale) {
+  const notifier = createNotifier(locale);
   return {
-    dialog: {
-      confirm: async (changes, totalItemCount) => {
-        const result = await openCleaningConfirmationDialog(
-          changes,
-          totalItemCount,
-          undefined,
-          locale.getString,
-        );
-        return result === "confirm";
+    clean: {
+      dialog: {
+        confirm: async (changes, totalItemCount) => {
+          const result = await openCleaningConfirmationDialog(
+            changes,
+            totalItemCount,
+            undefined,
+            locale.getString,
+          );
+          return result === "confirm";
+        },
+      } satisfies DialogAdapter,
+      writer: {
+        toCleanableItem,
+        applyChanges,
+        undoChanges,
+      } satisfies WriterAdapter,
+      notifier,
+    },
+    filterDelete: {
+      candidates: {
+        collectCandidates: async () =>
+          collectCandidates(Zotero.getActiveZoteroPane().getSelectedItems()),
       },
-    } satisfies DialogAdapter,
-    writer: {
-      toCleanableItem,
-      applyChanges,
-      undoChanges,
-    } satisfies WriterAdapter,
-    notifier: createNotifier(locale),
+      dialog: {
+        choose: (candidates) =>
+          openFilterDeleteDialog(candidates, undefined, locale.getString),
+      },
+      writer: { moveToTrash: moveCandidatesToTrash },
+      notifier,
+    } satisfies FilterDeleteAdapters,
   };
 }
 
@@ -69,8 +93,9 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   registerItemMenu(
     store,
     locale,
-    () => cleanSelectedItems(store, adapters, locale),
-    () => undoLastCleanOperation(store, adapters, locale),
+    () => cleanSelectedItems(store, adapters.clean, locale),
+    () => undoLastCleanOperation(store, adapters.clean, locale),
+    () => filterDeleteSelectedItems(adapters.filterDelete, locale),
   );
 }
 

@@ -1,0 +1,73 @@
+name: Bug 报告
+description: 报告一个可复现的问题
+labels: ["needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请尽量提供可复现的最小步骤，缺少版本信息的问题难以定位。
+        由 AI 生成或 AI 辅助生成的内容必须声明，规范见 [CONTRIBUTING.md](https://github.com/ouyangjiahong26/bibtex-clean/blob/main/CONTRIBUTING.md)。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 发生了什么？你期望发生什么？
+      placeholder: 选中 3 个条目执行「清理条目」后，只有 2 个条目的作者字段被修改。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从零开始的操作序列，越具体越好。
+      placeholder: |
+        1. 选中条目 A、B、C
+        2. 右键 → 清理条目
+        3. 确认对话框显示 3 条变更，确认后……
+    validations:
+      required: true
+
+  - type: input
+    id: zotero-version
+    attributes:
+      label: Zotero 版本
+      placeholder: 7.0.15
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: 插件版本
+      description: 在 Zotero 的 `Tools → Add-ons` 中查看。
+      placeholder: 1.2.13
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志
+      description: 在 Zotero 中开启 `Help → Debug Output Logging` 复现后，粘贴相关输出。
+      render: text
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        内容由 AI 生成或 AI 辅助生成时，标题最开头加 `[AI Generated] ` 并加上 `ai-generated` 标签，
+        规范见 [CONTRIBUTING.md](https://github.com/ouyangjiahong26/bibtex-clean/blob/main/CONTRIBUTING.md)。

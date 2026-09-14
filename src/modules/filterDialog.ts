@@ -190,48 +190,125 @@ export const FILTER_DIALOG_ROLES = {
 // ── 元素树 ──────────────────────────────────────────────────────
 
 /**
- * 递归给元素树补上 XUL 命名空间。
+ * 递归补上命名空间：容器用 XUL，控件用 HTML。
  *
- * ztoolkit 在 tag 同时属于 HTML 与 XUL 时优先 HTML，而 label、button 在两边都
- * 存在：不写 namespace 时它们会被建成 HTML 元素（HTML label 不显示 value、
- * HTML button 不显示 label），对话框就只剩控件框、没有任何文字。
+ * 两条实测结论决定了这个分工：
+ * 1. ztoolkit 在 tag 同时属于 HTML 与 XUL 时优先 HTML，label 与 button 因此会被
+ *    建成 HTML 元素；XUL 的容器文字元素（label）必须显式写 xul 才会渲染。
+ * 2. Zotero 的 XUL 控件（checkbox / radio / menulist）在插件对话框文档里不渲染
+ *    自身文字（只有框），而 HTML 控件与其 innerHTML 文字正常——ztoolkit 自己的
+ *    对话框按钮就是 HTML button + innerHTML。
+ *
+ * 所以：文字用 XUL label 的 value 或 HTML 的 innerHTML，控件一律 HTML。
  */
-function withXulNamespace(props: TagElementProps): TagElementProps {
+function withNamespace(props: TagElementProps): TagElementProps {
   return {
     ...props,
-    namespace: "xul",
-    children: props.children?.map(withXulNamespace),
+    namespace: props.namespace ?? "xul",
+    children: props.children?.map(withNamespace),
   };
 }
 
-function menulist(
+/** 纯文字：XUL label 的 value，实测在这个对话框里渲染正常。 */
+function textLabel(
+  value: string,
+  options: { classList?: string[]; flex?: string; crop?: boolean } = {},
+): TagElementProps {
+  return {
+    tag: "label",
+    namespace: "xul",
+    classList: options.classList,
+    attributes: {
+      value,
+      ...(options.flex ? { flex: options.flex } : {}),
+      ...(options.crop ? { crop: "end" } : {}),
+    },
+  };
+}
+
+/** HTML 复选框 + 旁边的文字，避免依赖 XUL 控件的 label 渲染。 */
+function checkboxWithLabel(options: {
+  label: string;
+  checked: boolean;
+  dataName: string;
+  dataValue: string;
+}): TagElementProps[] {
+  return [
+    {
+      tag: "input",
+      namespace: "html",
+      attributes: { type: "checkbox", [options.dataName]: options.dataValue },
+      properties: { checked: options.checked },
+    },
+    textLabel(options.label),
+  ];
+}
+
+/** HTML 单选钮（同一 name 一组）+ 文字。 */
+function radioWithLabel(options: {
+  label: string;
+  group: string;
+  checked: boolean;
+  dataName: string;
+  dataValue: string;
+}): TagElementProps[] {
+  return [
+    {
+      tag: "input",
+      namespace: "html",
+      attributes: {
+        type: "radio",
+        name: options.group,
+        [options.dataName]: options.dataValue,
+      },
+      properties: { checked: options.checked },
+    },
+    textLabel(options.label),
+  ];
+}
+
+/** HTML 下拉：文字走 option 的 innerHTML；Zotero 7 上由 ztoolkit 补下拉弹层。 */
+function selectControl(
   role: string,
   options: { value: string; label: string }[],
   selected: string,
 ): TagElementProps {
   return {
-    tag: "menulist",
+    tag: "select",
+    namespace: "html",
     classList: ["filter-select"],
     attributes: { [FILTER_DIALOG_DATA_KEYS.role]: role },
-    children: [
-      {
-        tag: "menupopup",
-        children: options.map((option) => ({
-          tag: "menuitem",
-          attributes: {
-            label: option.label,
-            value: option.value,
-            selected: option.value === selected,
-          },
-        })),
-      },
-    ],
+    children: options.map((option) => ({
+      tag: "option",
+      namespace: "html",
+      attributes: { value: option.value, selected: option.value === selected },
+      properties: { innerHTML: option.label },
+    })),
+  };
+}
+
+/** HTML 按钮：文字走 innerHTML，与 ztoolkit 的对话框按钮一致。 */
+function htmlButton(options: {
+  label: string;
+  id?: string;
+  role?: string;
+}): TagElementProps {
+  return {
+    tag: "button",
+    namespace: "html",
+    id: options.id,
+    classList: ["filter-button"],
+    attributes: {
+      type: "button",
+      ...(options.role ? { [FILTER_DIALOG_DATA_KEYS.role]: options.role } : {}),
+    },
+    properties: { innerHTML: options.label },
   };
 }
 
 /** 条件区：每行是 字段范围 × 运算符 × 值。 */
 export function buildConditionRows(data: FilterDialogData): TagElementProps {
-  return withXulNamespace({
+  return withNamespace({
     tag: "vbox",
     id: FILTER_DIALOG_IDS.conditions,
     children: buildConditionRowItems(data),
@@ -245,48 +322,44 @@ export function buildConditionRowItems(
   const items: TagElementProps[] = data.conditions.map((condition, index) => ({
     tag: "hbox",
     classList: ["condition-row"],
-    attributes: {
-      "data-index": String(index),
-      align: "center",
-    },
+    attributes: { "data-index": String(index), align: "center" },
     children: [
-      menulist(FILTER_DIALOG_ROLES.field, data.fields, condition.field),
-      menulist(
+      selectControl(FILTER_DIALOG_ROLES.field, data.fields, condition.field),
+      selectControl(
         FILTER_DIALOG_ROLES.operator,
         data.operators,
         condition.operator,
       ),
       {
-        tag: "textbox",
+        tag: "input",
+        namespace: "html",
         classList: ["filter-input"],
         attributes: {
+          type: "text",
           [FILTER_DIALOG_DATA_KEYS.role]: FILTER_DIALOG_ROLES.value,
-          value: condition.value,
           placeholder: data.valuePlaceholder,
           flex: "1",
         },
+        properties: { value: condition.value },
       },
-      {
-        tag: "button",
-        attributes: {
-          [FILTER_DIALOG_DATA_KEYS.role]: FILTER_DIALOG_ROLES.removeCondition,
-          label: data.removeConditionLabel,
-        },
-      },
+      htmlButton({
+        label: data.removeConditionLabel,
+        role: FILTER_DIALOG_ROLES.removeCondition,
+      }),
     ],
   }));
-  return items.map(withXulNamespace);
+  return items.map(withNamespace);
 }
 
 /** 候选列表：勾选框 + 类型徽标 + 子项标题 + 父条目标题。 */
 export function buildCandidateRows(data: FilterDialogData): TagElementProps {
-  return withXulNamespace({
+  return withNamespace({
     tag: "vbox",
     id: FILTER_DIALOG_IDS.candidateList,
     classList: ["candidate-list"],
-    // 固定高度而不是 max-height：外层不再用 fitContent，配合 flex 才不会被压成 0
+    // flex 1 让列表占满剩余高度并自己滚动，页脚与窗口按钮才不会被挤出可视区
     attributes: { flex: "1" },
-    styles: { minHeight: "240px", overflowY: "auto" },
+    styles: { overflowY: "auto", minHeight: "0" },
     children: buildCandidateRowItems(data),
   });
 }
@@ -296,15 +369,7 @@ export function buildCandidateRowItems(
   data: FilterDialogData,
 ): TagElementProps[] {
   if (data.rows.length === 0) {
-    const emptyState: TagElementProps[] = [
-      {
-        tag: "label",
-        classList: ["candidate-empty"],
-        attributes: { value: data.emptyText, flex: "1" },
-        styles: { textAlign: "center", opacity: "0.7" },
-      },
-    ];
-    return emptyState.map(withXulNamespace);
+    return [withNamespace(textLabel(data.emptyText, { flex: "1" }))];
   }
 
   const items: TagElementProps[] = data.rows.map((row) => ({
@@ -313,44 +378,41 @@ export function buildCandidateRowItems(
     attributes: { align: "center" },
     children: [
       {
-        tag: "checkbox",
+        tag: "input",
+        namespace: "html",
         attributes: {
+          type: "checkbox",
           [FILTER_DIALOG_DATA_KEYS.candidate]: row.key,
-          checked: row.checked,
           "aria-label": row.title,
         },
+        properties: { checked: row.checked },
       },
-      {
-        tag: "label",
-        classList: ["candidate-badge"],
-        attributes: { value: row.kindLabel },
-      },
-      {
-        tag: "label",
+      textLabel(row.kindLabel, { classList: ["candidate-badge"] }),
+      textLabel(row.title, {
         classList: ["candidate-title"],
-        attributes: { value: row.title, crop: "end", flex: "1" },
-      },
-      {
-        tag: "label",
+        flex: "1",
+        crop: true,
+      }),
+      textLabel(row.parentTitle, {
         classList: ["candidate-parent"],
-        attributes: { value: row.parentTitle, crop: "end" },
-        styles: { opacity: "0.7", maxWidth: "240px" },
-      },
+        crop: true,
+      }),
     ],
   }));
-  return items.map(withXulNamespace);
+  return items.map(withNamespace);
 }
 
 /** 完整对话框内容：条件区 + 候选列表 + 底部计数与批量勾选。 */
 export function buildFilterDialogContent(
   data: FilterDialogData,
 ): TagElementProps {
-  return withXulNamespace({
+  return withNamespace({
     tag: "vbox",
     id: FILTER_DIALOG_IDS.root,
     classList: ["bibtex-clean-filter"],
     attributes: { flex: "1" },
-    styles: { padding: "12px 16px", overflowY: "auto" },
+    // 外层不滚动：只有候选列表滚动，页脚与窗口按钮始终可见
+    styles: { padding: "12px 16px", overflow: "hidden", minHeight: "0" },
     children: [
       {
         tag: "vbox",
@@ -361,19 +423,15 @@ export function buildFilterDialogContent(
             classList: ["filter-line"],
             attributes: { align: "center" },
             children: [
-              {
-                tag: "label",
-                classList: ["filter-label"],
-                attributes: { value: data.typeLabel },
-              },
-              ...data.kinds.map((kind) => ({
-                tag: "checkbox",
-                attributes: {
-                  [FILTER_DIALOG_DATA_KEYS.kind]: kind.value,
+              textLabel(data.typeLabel, { classList: ["filter-label"] }),
+              ...data.kinds.flatMap((kind) =>
+                checkboxWithLabel({
                   label: kind.label,
                   checked: kind.checked,
-                },
-              })),
+                  dataName: FILTER_DIALOG_DATA_KEYS.kind,
+                  dataValue: kind.value,
+                }),
+              ),
             ],
           },
           {
@@ -381,31 +439,23 @@ export function buildFilterDialogContent(
             classList: ["filter-line"],
             attributes: { align: "center" },
             children: [
-              {
-                tag: "label",
-                classList: ["filter-label"],
-                attributes: { value: data.matchLabel },
-              },
-              {
-                tag: "radiogroup",
-                attributes: { [FILTER_DIALOG_DATA_KEYS.role]: "match" },
-                children: data.matchModes.map((mode) => ({
-                  tag: "radio",
-                  attributes: {
-                    [FILTER_DIALOG_DATA_KEYS.match]: mode.value,
-                    label: mode.label,
-                    selected: mode.checked,
-                  },
-                })),
-              },
+              textLabel(data.matchLabel, { classList: ["filter-label"] }),
+              ...data.matchModes.flatMap((mode) =>
+                radioWithLabel({
+                  label: mode.label,
+                  group: "bibtex-clean-match",
+                  checked: mode.checked,
+                  dataName: FILTER_DIALOG_DATA_KEYS.match,
+                  dataValue: mode.value,
+                }),
+              ),
             ],
           },
           buildConditionRows(data),
-          {
-            tag: "button",
+          htmlButton({
+            label: data.addConditionLabel,
             id: FILTER_DIALOG_IDS.addCondition,
-            attributes: { label: data.addConditionLabel },
-          },
+          }),
         ],
       },
       buildCandidateRows(data),
@@ -416,19 +466,20 @@ export function buildFilterDialogContent(
         children: [
           {
             tag: "label",
+            namespace: "xul",
             id: FILTER_DIALOG_IDS.checkedSummary,
+            classList: ["checked-summary"],
             attributes: { value: data.checkedSummary, flex: "1" },
           },
-          {
-            tag: "button",
+          { tag: "spacer", namespace: "xul", attributes: { flex: "1" } },
+          htmlButton({
+            label: data.selectAllLabel,
             id: FILTER_DIALOG_IDS.selectAll,
-            attributes: { label: data.selectAllLabel },
-          },
-          {
-            tag: "button",
+          }),
+          htmlButton({
+            label: data.selectNoneLabel,
             id: FILTER_DIALOG_IDS.selectNone,
-            attributes: { label: data.selectNoneLabel },
-          },
+          }),
         ],
       },
     ],

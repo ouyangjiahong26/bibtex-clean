@@ -195,23 +195,23 @@ describe("filterDialog", function () {
 
       assert.lengthOf(items, 2);
       const [first, second] = items;
-      const checkbox = first.children?.find(
-        (child) => child.tag === "checkbox",
-      );
+      const checkbox = first.children?.find((child) => child.tag === "input");
       assert.equal(
         attr(checkbox!, FILTER_DIALOG_DATA_KEYS.candidate),
         "1\u0000ATT1",
       );
-      assert.isTrue(attr(checkbox!, "checked"));
+      assert.isTrue(checkbox!.properties?.checked);
+      assert.equal(checkbox!.namespace, "html", "控件用 HTML");
 
       const labels = first.children?.filter((child) => child.tag === "label");
       assert.deepEqual(
         labels?.map((label) => attr(label, "value")),
         ["dialog-filter-kind-link-attachment", "超星电子书", "论文一"],
       );
+      assert.equal(labels?.[0].namespace, "xul", "文字用 XUL label");
 
       const secondCheckbox = second.children?.find(
-        (child) => child.tag === "checkbox",
+        (child) => child.tag === "input",
       );
       assert.equal(
         attr(secondCheckbox!, FILTER_DIALOG_DATA_KEYS.candidate),
@@ -219,7 +219,7 @@ describe("filterDialog", function () {
       );
     });
 
-    it("leaves unchecked rows without a checked attribute", function () {
+    it("leaves unchecked rows unchecked", function () {
       const state = withCondition(
         initialState(candidates),
         0,
@@ -230,9 +230,9 @@ describe("filterDialog", function () {
       const items = buildCandidateRowItems(view(state));
       assert.lengthOf(items, 1);
       const checkbox = items[0].children?.find(
-        (child) => child.tag === "checkbox",
+        (child) => child.tag === "input",
       );
-      assert.isFalse(attr(checkbox!, "checked"));
+      assert.isFalse(checkbox!.properties?.checked);
     });
 
     it("shows the empty state instead of rows", function () {
@@ -280,7 +280,7 @@ describe("filterDialog", function () {
   });
 
   describe("buildConditionRowItems", function () {
-    it("builds a menulist pair, a textbox and a remove button per row", function () {
+    it("builds two selects, a text input and a remove button per row", function () {
       const state = withCondition(
         initialState(candidates),
         0,
@@ -293,39 +293,43 @@ describe("filterDialog", function () {
       const row = items[0];
       assert.equal(attr(row, "data-index"), "0");
 
-      const [fieldList, operatorList] = (row.children ?? []).filter(
-        (child) => child.tag === "menulist",
+      const selects = (row.children ?? []).filter(
+        (child) => child.tag === "select",
       );
+      assert.lengthOf(selects, 2);
       assert.equal(
-        attr(fieldList, FILTER_DIALOG_DATA_KEYS.role),
+        attr(selects[0], FILTER_DIALOG_DATA_KEYS.role),
         FILTER_DIALOG_ROLES.field,
       );
       assert.equal(
-        attr(operatorList, FILTER_DIALOG_DATA_KEYS.role),
+        attr(selects[1], FILTER_DIALOG_DATA_KEYS.role),
         FILTER_DIALOG_ROLES.operator,
       );
 
-      const fieldItems = fieldList.children?.[0].children ?? [];
-      assert.equal(attr(fieldItems[0], "value"), "any");
-      const selectedField = fieldItems.filter((item) => attr(item, "selected"));
+      const fieldOptions = selects[0].children ?? [];
+      assert.equal(attr(fieldOptions[0], "value"), "any");
+      assert.equal(
+        fieldOptions[0].properties?.innerHTML,
+        "dialog-filter-field-any",
+        "选项文字走 innerHTML",
+      );
       assert.deepEqual(
-        selectedField.map((item) => attr(item, "value")),
+        fieldOptions
+          .filter((option) => attr(option, "selected"))
+          .map((option) => attr(option, "value")),
         ["note"],
       );
-      const operatorItems = operatorList.children?.[0].children ?? [];
       assert.deepEqual(
-        operatorItems
-          .filter((item) => attr(item, "selected"))
-          .map((item) => attr(item, "value")),
+        (selects[1].children ?? [])
+          .filter((option) => attr(option, "selected"))
+          .map((option) => attr(option, "value")),
         ["notContains"],
       );
 
-      const textbox = (row.children ?? []).find(
-        (child) => child.tag === "textbox",
-      );
-      assert.equal(attr(textbox, "value"), "扫描");
+      const input = (row.children ?? []).find((child) => child.tag === "input");
+      assert.equal(input!.properties?.value, "扫描");
       assert.equal(
-        attr(textbox, "placeholder"),
+        attr(input, "placeholder"),
         "dialog-filter-value-placeholder",
       );
 
@@ -337,8 +341,9 @@ describe("filterDialog", function () {
         FILTER_DIALOG_ROLES.removeCondition,
       );
       assert.equal(
-        attr(removeButton, "label"),
+        removeButton!.properties?.innerHTML,
         "dialog-filter-remove-condition",
+        "按钮文字走 innerHTML",
       );
     });
   });
@@ -363,14 +368,15 @@ describe("filterDialog", function () {
         );
       }
 
-      const kinds = nodes.filter(
+      const kindInputs = nodes.filter(
         (node) =>
-          node.tag === "checkbox" && attr(node, FILTER_DIALOG_DATA_KEYS.kind),
+          node.tag === "input" &&
+          attr(node, FILTER_DIALOG_DATA_KEYS.kind) !== undefined,
       );
       assert.deepEqual(
-        kinds.map((node) => [
+        kindInputs.map((node) => [
           attr(node, FILTER_DIALOG_DATA_KEYS.kind),
-          attr(node, "checked"),
+          node.properties?.checked,
         ]),
         [
           ["link-attachment", true],
@@ -378,20 +384,27 @@ describe("filterDialog", function () {
         ],
       );
 
-      const radios = nodes.filter(
+      const matchInputs = nodes.filter(
         (node) =>
-          node.tag === "radio" && attr(node, FILTER_DIALOG_DATA_KEYS.match),
+          node.tag === "input" &&
+          attr(node, FILTER_DIALOG_DATA_KEYS.match) !== undefined,
       );
       assert.deepEqual(
-        radios.map((node) => [
+        matchInputs.map((node) => [
           attr(node, FILTER_DIALOG_DATA_KEYS.match),
-          attr(node, "selected"),
+          node.properties?.checked,
         ]),
         [
           ["all", true],
           ["any", false],
         ],
       );
+
+      // 每种控件的文字都必须落在能被渲染的载体上
+      const kindsText = nodes.filter(
+        (node) => node.tag === "label" && node.namespace === "xul",
+      );
+      assert.isNotEmpty(kindsText, "文字用 XUL label 渲染");
     });
 
     it("shows the checked summary and empty state text", function () {
@@ -454,25 +467,35 @@ describe("filterDialog", function () {
       );
     });
 
-    it("gives every element an explicit XUL namespace", function () {
+    it("gives every element an explicit namespace, and controls use HTML", function () {
       const data = view(initialState(candidates));
-      // 重绘走的是行项构建器，两条路径都要盖章
       const nodes = [
         ...flatten(buildFilterDialogContent(data)),
         ...buildConditionRowItems(data).flatMap(flatten),
         ...buildCandidateRowItems(data).flatMap(flatten),
       ];
 
-      // ztoolkit 在 tag 同时属于 HTML 与 XUL 时优先 HTML：label 与 button 会因此
-      // 被建成 HTML 元素，而 HTML label 不显示 value、HTML button 不显示 label，
-      // 对话框就只剩控件框、没有任何文字。每个元素都必须写明 namespace。
+      // ztoolkit 在 tag 同时属于 HTML 与 XUL 时优先 HTML：不写 namespace 的 label
+      // 会被建成 HTML 元素（HTML label 不显示 value）；而 XUL 控件又不渲染自身
+      // 文字。所以每个元素都必须显式写 namespace，控件走 HTML、文字走 XUL。
       assert.deepEqual(
         nodes
-          .filter((node) => node.namespace !== "xul")
+          .filter(
+            (node) => node.namespace !== "xul" && node.namespace !== "html",
+          )
           .map((node) => node.tag),
         [],
       );
-
+      assert.deepEqual(
+        nodes
+          .filter((node) =>
+            ["input", "select", "button"].includes(node.tag ?? ""),
+          )
+          .filter((node) => node.namespace !== "html")
+          .map((node) => node.tag),
+        [],
+        "控件必须是 HTML：XUL 控件在插件对话框里不渲染自身文字",
+      );
       const tags = nodes.map((node) => node.tag);
       assert.include(tags, "label");
       assert.include(tags, "button");

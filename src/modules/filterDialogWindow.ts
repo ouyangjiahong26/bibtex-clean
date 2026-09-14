@@ -2,7 +2,7 @@
  * 筛选删除对话框的窗口层：ztoolkit.Dialog + 事件绑定与重绘。
  *
  * 纯数据与元素树在 filterDialog.ts；这一层用 ztoolkit.createElement 建树，
- * 事件代理读 data-* 属性与控件的 value，因此只能在 Zotero 运行时里验证。
+ * 事件代理读 data-* 属性与控件的 value，控件为 HTML，因此只能在 Zotero 运行时里验证。
  */
 
 import type { TagElementProps } from "zotero-plugin-toolkit";
@@ -135,7 +135,8 @@ export async function openFilterDeleteDialog(
     const readValue = (target: Element): string =>
       (target as ValueElement).value ?? "";
 
-    root.addEventListener("command", (event: Event) => {
+    // HTML 控件：勾选/单选/下拉用 change，文本用 input，按钮用 click
+    root.addEventListener("change", (event: Event) => {
       const target = event.target as Element;
       const role = target.getAttribute(FILTER_DIALOG_DATA_KEYS.role);
       const kind = target.getAttribute(FILTER_DIALOG_DATA_KEYS.kind);
@@ -148,12 +149,6 @@ export async function openFilterDeleteDialog(
         apply(withMatchMode(state, match as MatchMode, candidates));
       } else if (key !== null) {
         apply(toggleChecked(state, key));
-      } else if (target.id === FILTER_DIALOG_IDS.addCondition) {
-        apply(addCondition(state, candidates), true);
-      } else if (target.id === FILTER_DIALOG_IDS.selectAll) {
-        apply(setAllChecked(state, candidates, true));
-      } else if (target.id === FILTER_DIALOG_IDS.selectNone) {
-        apply(setAllChecked(state, candidates, false));
       } else if (role === FILTER_DIALOG_ROLES.field) {
         apply(
           withCondition(
@@ -172,19 +167,9 @@ export async function openFilterDeleteDialog(
             candidates,
           ),
         );
-      } else if (role === FILTER_DIALOG_ROLES.removeCondition) {
-        apply(
-          removeCondition(state, conditionIndexOf(target), candidates),
-          true,
-        );
-      } else {
-        Zotero.debug(
-          `[BibTeX Clean] 筛选删除对话框收到未处理的 command：id=${target.id} role=${role}`,
-        );
       }
     });
 
-    // XUL textbox 在输入时派发 input，失焦时派发 change；两者都按值处理，幂等。
     const onValueChanged = (event: Event) => {
       const target = event.target as Element;
       if (
@@ -203,7 +188,47 @@ export async function openFilterDeleteDialog(
       );
     };
     root.addEventListener("input", onValueChanged);
-    root.addEventListener("change", onValueChanged);
+
+    root.addEventListener("click", (event: Event) => {
+      const target = event.target as Element;
+      const role = target.getAttribute(FILTER_DIALOG_DATA_KEYS.role);
+
+      if (target.id === FILTER_DIALOG_IDS.addCondition) {
+        apply(addCondition(state, candidates), true);
+      } else if (target.id === FILTER_DIALOG_IDS.selectAll) {
+        apply(setAllChecked(state, candidates, true));
+      } else if (target.id === FILTER_DIALOG_IDS.selectNone) {
+        apply(setAllChecked(state, candidates, false));
+      } else if (role === FILTER_DIALOG_ROLES.removeCondition) {
+        apply(
+          removeCondition(state, conditionIndexOf(target), candidates),
+          true,
+        );
+      }
+    });
+
+    // Zotero 7（Gecko 115）上 ztoolkit 会把 select 换成 div 自绘下拉：点击选项时
+    // 它直接改 select.value 再 blur，不派发 change。focusout 会冒泡，在这里补读值。
+    root.addEventListener("focusout", (event: Event) => {
+      const target = event.target as Element;
+      const role = target.getAttribute(FILTER_DIALOG_DATA_KEYS.role);
+      if (
+        role !== FILTER_DIALOG_ROLES.field &&
+        role !== FILTER_DIALOG_ROLES.operator
+      ) {
+        return;
+      }
+      apply(
+        withCondition(
+          state,
+          conditionIndexOf(target),
+          role === FILTER_DIALOG_ROLES.field
+            ? { field: readValue(target) as FilterField }
+            : { operator: readValue(target) as FilterOperator },
+          candidates,
+        ),
+      );
+    });
 
     repaint(false);
   };

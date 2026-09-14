@@ -453,5 +453,29 @@ describe("filterDialog", function () {
         "容器内是候选行，重绘时可整体替换",
       );
     });
+
+    it("gives every element an explicit XUL namespace", function () {
+      const data = view(initialState(candidates));
+      // 重绘走的是行项构建器，两条路径都要盖章
+      const nodes = [
+        ...flatten(buildFilterDialogContent(data)),
+        ...buildConditionRowItems(data).flatMap(flatten),
+        ...buildCandidateRowItems(data).flatMap(flatten),
+      ];
+
+      // ztoolkit 在 tag 同时属于 HTML 与 XUL 时优先 HTML：label 与 button 会因此
+      // 被建成 HTML 元素，而 HTML label 不显示 value、HTML button 不显示 label，
+      // 对话框就只剩控件框、没有任何文字。每个元素都必须写明 namespace。
+      assert.deepEqual(
+        nodes
+          .filter((node) => node.namespace !== "xul")
+          .map((node) => node.tag),
+        [],
+      );
+
+      const tags = nodes.map((node) => node.tag);
+      assert.include(tags, "label");
+      assert.include(tags, "button");
+    });
   });
 });

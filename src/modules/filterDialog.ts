@@ -189,6 +189,21 @@ export const FILTER_DIALOG_ROLES = {
 
 // ── 元素树 ──────────────────────────────────────────────────────
 
+/**
+ * 递归给元素树补上 XUL 命名空间。
+ *
+ * ztoolkit 在 tag 同时属于 HTML 与 XUL 时优先 HTML，而 label、button 在两边都
+ * 存在：不写 namespace 时它们会被建成 HTML 元素（HTML label 不显示 value、
+ * HTML button 不显示 label），对话框就只剩控件框、没有任何文字。
+ */
+function withXulNamespace(props: TagElementProps): TagElementProps {
+  return {
+    ...props,
+    namespace: "xul",
+    children: props.children?.map(withXulNamespace),
+  };
+}
+
 function menulist(
   role: string,
   options: { value: string; label: string }[],
@@ -216,18 +231,18 @@ function menulist(
 
 /** 条件区：每行是 字段范围 × 运算符 × 值。 */
 export function buildConditionRows(data: FilterDialogData): TagElementProps {
-  return {
+  return withXulNamespace({
     tag: "vbox",
     id: FILTER_DIALOG_IDS.conditions,
     children: buildConditionRowItems(data),
-  };
+  });
 }
 
 /** 条件行本身，供重绘时替换容器内容。 */
 export function buildConditionRowItems(
   data: FilterDialogData,
 ): TagElementProps[] {
-  return data.conditions.map((condition, index) => ({
+  const items: TagElementProps[] = data.conditions.map((condition, index) => ({
     tag: "hbox",
     classList: ["condition-row"],
     attributes: {
@@ -260,11 +275,12 @@ export function buildConditionRowItems(
       },
     ],
   }));
+  return items.map(withXulNamespace);
 }
 
 /** 候选列表：勾选框 + 类型徽标 + 子项标题 + 父条目标题。 */
 export function buildCandidateRows(data: FilterDialogData): TagElementProps {
-  return {
+  return withXulNamespace({
     tag: "vbox",
     id: FILTER_DIALOG_IDS.candidateList,
     classList: ["candidate-list"],
@@ -272,7 +288,7 @@ export function buildCandidateRows(data: FilterDialogData): TagElementProps {
     attributes: { flex: "1" },
     styles: { minHeight: "240px", overflowY: "auto" },
     children: buildCandidateRowItems(data),
-  };
+  });
 }
 
 /** 候选行本身，供重绘时替换容器内容。 */
@@ -280,7 +296,7 @@ export function buildCandidateRowItems(
   data: FilterDialogData,
 ): TagElementProps[] {
   if (data.rows.length === 0) {
-    return [
+    const emptyState: TagElementProps[] = [
       {
         tag: "label",
         classList: ["candidate-empty"],
@@ -288,9 +304,10 @@ export function buildCandidateRowItems(
         styles: { textAlign: "center", opacity: "0.7" },
       },
     ];
+    return emptyState.map(withXulNamespace);
   }
 
-  return data.rows.map((row) => ({
+  const items: TagElementProps[] = data.rows.map((row) => ({
     tag: "hbox",
     classList: ["candidate-row"],
     attributes: { align: "center" },
@@ -321,13 +338,14 @@ export function buildCandidateRowItems(
       },
     ],
   }));
+  return items.map(withXulNamespace);
 }
 
 /** 完整对话框内容：条件区 + 候选列表 + 底部计数与批量勾选。 */
 export function buildFilterDialogContent(
   data: FilterDialogData,
 ): TagElementProps {
-  return {
+  return withXulNamespace({
     tag: "vbox",
     id: FILTER_DIALOG_IDS.root,
     classList: ["bibtex-clean-filter"],
@@ -414,5 +432,5 @@ export function buildFilterDialogContent(
         ],
       },
     ],
-  };
+  });
 }

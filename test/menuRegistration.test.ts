@@ -57,7 +57,7 @@ describe("menuRegistration (right-click menu hook)", function () {
     return menuCalls.find((c) => c.options && c.options.id === id);
   }
 
-  it("registers three menu items under the 'item' context", function () {
+  it("registers four menu items under the 'item' context", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
@@ -66,12 +66,14 @@ describe("menuRegistration (right-click menu hook)", function () {
       () => {},
       () => {},
       () => {},
+      () => {},
     );
 
-    assert.lengthOf(menuCalls, 3, "expected exactly three Menu.register calls");
+    assert.lengthOf(menuCalls, 4, "expected exactly four Menu.register calls");
     assert.equal(menuCalls[0].target, "item");
     assert.equal(menuCalls[1].target, "item");
     assert.equal(menuCalls[2].target, "item");
+    assert.equal(menuCalls[3].target, "item");
   });
 
   it("registers 'clean' menu item with the expected id, tag, and label", function () {
@@ -80,6 +82,7 @@ describe("menuRegistration (right-click menu hook)", function () {
     registerItemMenu(
       mockStore,
       fakeLocale,
+      () => {},
       () => {},
       () => {},
       () => {},
@@ -107,6 +110,7 @@ describe("menuRegistration (right-click menu hook)", function () {
       () => {},
       () => {},
       () => {},
+      () => {},
     );
 
     const undoItem = callsById("zotero-itemmenu-bibtexclean-undo");
@@ -131,6 +135,7 @@ describe("menuRegistration (right-click menu hook)", function () {
       () => {},
       () => {},
       () => {},
+      () => {},
     );
 
     const filterDeleteItem = callsById(
@@ -151,12 +156,43 @@ describe("menuRegistration (right-click menu hook)", function () {
     );
   });
 
+  it("registers 'duplicate delete' menu item with the expected id, tag, and label", function () {
+    const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
+    const fakeLocale = createFakeLocale();
+    registerItemMenu(
+      mockStore,
+      fakeLocale,
+      () => {},
+      () => {},
+      () => {},
+      () => {},
+    );
+
+    const duplicateDeleteItem = callsById(
+      "zotero-itemmenu-bibtexclean-duplicate-delete",
+    );
+    assert.isDefined(
+      duplicateDeleteItem,
+      "duplicate delete menu item with id 'zotero-itemmenu-bibtexclean-duplicate-delete' must be registered",
+    );
+    assert.equal(duplicateDeleteItem!.options.tag, "menuitem");
+    assert.equal(
+      duplicateDeleteItem!.options.label,
+      "FAKE[menuitem-duplicate-delete]",
+    );
+    assert.isFunction(
+      duplicateDeleteItem!.options.commandListener,
+      "duplicate delete menu item must expose a commandListener",
+    );
+  });
+
   it("'undo' menu item is disabled when store has no undo", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
       mockStore,
       fakeLocale,
+      () => {},
       () => {},
       () => {},
       () => {},
@@ -183,6 +219,7 @@ describe("menuRegistration (right-click menu hook)", function () {
       () => {},
       () => {},
       () => {},
+      () => {},
     );
 
     const undoItem = callsById("zotero-itemmenu-bibtexclean-undo");
@@ -197,6 +234,7 @@ describe("menuRegistration (right-click menu hook)", function () {
     let cleanCalled = 0;
     let undoCalled = 0;
     let filterDeleteCalled = 0;
+    let duplicateDeleteCalled = 0;
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
 
@@ -212,6 +250,9 @@ describe("menuRegistration (right-click menu hook)", function () {
       () => {
         filterDeleteCalled += 1;
       },
+      () => {
+        duplicateDeleteCalled += 1;
+      },
     );
 
     const cleanItem = callsById("zotero-itemmenu-bibtexclean-clean");
@@ -219,13 +260,18 @@ describe("menuRegistration (right-click menu hook)", function () {
     const filterDeleteItem = callsById(
       "zotero-itemmenu-bibtexclean-filter-delete",
     );
+    const duplicateDeleteItem = callsById(
+      "zotero-itemmenu-bibtexclean-duplicate-delete",
+    );
     assert.isDefined(cleanItem);
     assert.isDefined(undoItem);
     assert.isDefined(filterDeleteItem);
+    assert.isDefined(duplicateDeleteItem);
 
     cleanItem!.options.commandListener();
     undoItem!.options.commandListener();
     filterDeleteItem!.options.commandListener();
+    duplicateDeleteItem!.options.commandListener();
     cleanItem!.options.commandListener();
 
     assert.equal(cleanCalled, 2, "clean callback should fire on each click");
@@ -234,6 +280,11 @@ describe("menuRegistration (right-click menu hook)", function () {
       filterDeleteCalled,
       1,
       "filter delete callback should fire on click",
+    );
+    assert.equal(
+      duplicateDeleteCalled,
+      1,
+      "duplicate delete callback should fire on click",
     );
   });
 });

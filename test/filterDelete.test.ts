@@ -54,6 +54,10 @@ class FakeNotifier implements DeleteNotifierAdapter {
     this.infos.push(text);
   }
 
+  showError(_text: string): void {
+    // 筛选删除流程目前不触发通用错误通知
+  }
+
   showDeleteSuccess(text: string, detail?: string): void {
     this.successes.push({ text, detail });
   }
@@ -68,7 +72,7 @@ class FakeNotifier implements DeleteNotifierAdapter {
 function createHarness(options: {
   candidates: Candidate[];
   chosen?: Candidate[];
-  result?: DeleteResult;
+  result?: DeleteResult<Candidate>;
 }) {
   const notifier = new FakeNotifier();
   const dialogCalls: Candidate[][] = [];

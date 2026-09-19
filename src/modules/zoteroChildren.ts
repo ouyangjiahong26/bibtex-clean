@@ -6,7 +6,7 @@
  */
 
 import { candidateKey, type Candidate } from "./filterCandidates";
-import type { DeleteResult } from "./filterDelete";
+import type { DeleteResult, Trashable } from "./filterDelete";
 import { chunk } from "../utils/chunk";
 import { config } from "../../package.json";
 
@@ -152,7 +152,9 @@ export function deleteConcurrency(): number {
   return Math.min(Math.max(Math.floor(pref), 1), MAX_DELETE_CONCURRENCY);
 }
 
-async function moveCandidateToTrash(candidate: Candidate): Promise<void> {
+async function moveCandidateToTrash<T extends Trashable>(
+  candidate: T,
+): Promise<void> {
   const item = await Zotero.Items.getByLibraryAndKeyAsync(
     candidate.libraryID,
     candidate.itemKey,
@@ -167,12 +169,13 @@ async function moveCandidateToTrash(candidate: Candidate): Promise<void> {
 /**
  * 把候选项移入 Zotero 回收站，按偏好里的并发数分批执行。
  * 单个条目失败不影响其余条目，失败明细交给通知层。
+ * 泛型约束只要求 libraryID + itemKey，筛选删除与重复附件清理共用。
  */
-export async function moveCandidatesToTrash(
-  candidates: Candidate[],
-): Promise<DeleteResult> {
-  const succeeded: Candidate[] = [];
-  const failed: { candidate: Candidate; error: Error }[] = [];
+export async function moveCandidatesToTrash<T extends Trashable>(
+  candidates: T[],
+): Promise<DeleteResult<T>> {
+  const succeeded: T[] = [];
+  const failed: { candidate: T; error: Error }[] = [];
 
   for (const batch of chunk(candidates, deleteConcurrency())) {
     const results = await Promise.allSettled(batch.map(moveCandidateToTrash));

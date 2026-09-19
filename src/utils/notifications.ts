@@ -4,17 +4,22 @@
 
 import type { Change } from "../modules/changes";
 import type { NotifierAdapter } from "../modules/cleanSession";
-import type { Candidate } from "../modules/filterCandidates";
 import type { DeleteNotifierAdapter } from "../modules/filterDelete";
+import type {
+  ScanProgressAdapter,
+  ScanProgressHandle,
+} from "../modules/duplicateDelete";
 import type { Locale } from "./locale";
 
 /**
  * 创建真实的 NotifierAdapter，底层使用 ztoolkit.ProgressWindow。
- * 同时满足清理流程与筛选删除流程的通知接口。
+ * 同时满足清理流程、筛选删除流程的通知接口与重复附件扫描的进度接口。
  */
 export function createNotifier(
   locale: Locale,
-): NotifierAdapter & DeleteNotifierAdapter {
+): NotifierAdapter &
+  DeleteNotifierAdapter &
+  Pick<ScanProgressAdapter, "startScan"> {
   const addonName = addon.data.config.addonName;
 
   function showSuccess(text: string): void {
@@ -26,6 +31,12 @@ export function createNotifier(
   function showInfo(text: string): void {
     new ztoolkit.ProgressWindow(addonName)
       .createLine({ text, type: "default" })
+      .show();
+  }
+
+  function showError(text: string): void {
+    new ztoolkit.ProgressWindow(addonName)
+      .createLine({ text, type: "fail" })
       .show();
   }
 
@@ -88,7 +99,7 @@ export function createNotifier(
   }
 
   function showDeleteErrorDetails(
-    failed: { candidate: Candidate; error: Error }[],
+    failed: { candidate: { title: string }; error: Error }[],
   ): void {
     const progressWindow = new ztoolkit.ProgressWindow(addonName);
     progressWindow.createLine({
@@ -106,12 +117,53 @@ export function createNotifier(
     progressWindow.show();
   }
 
+  /**
+   * 扫描重复附件的进度窗口：常驻显示进度条，随扫描批次更新，由调用方关闭。
+   * close 做成幂等：编排层在正常路径与异常路径都会调用。
+   */
+  function startScan(): ScanProgressHandle {
+    const progressWindow = new ztoolkit.ProgressWindow(addonName, {
+      closeOnClick: false,
+      closeOtherProgressWindows: true,
+    });
+    progressWindow
+      .createLine({
+        text: locale.getString("message-scanning-duplicates"),
+        type: "default",
+        progress: 0,
+      })
+      .show();
+    let closed = false;
+    return {
+      update(processed: number, total: number) {
+        if (closed) {
+          return;
+        }
+        progressWindow.changeLine({
+          text: locale.getString("message-scanning-duplicates-progress", {
+            args: { done: String(processed), total: String(total) },
+          }),
+          progress: total > 0 ? (processed / total) * 100 : 100,
+          idx: 0,
+        });
+      },
+      close() {
+        if (!closed) {
+          closed = true;
+          progressWindow.close();
+        }
+      },
+    };
+  }
+
   return {
     showInfo,
+    showError,
     showSuccess,
     showErrorDetails,
     showUndoableSuccess,
     showDeleteSuccess,
     showDeleteErrorDetails,
+    startScan,
   };
 }

@@ -6,7 +6,7 @@ import {
   parseAuthors,
   undoChanges,
 } from "../src/modules/zoteroWriter";
-import type { FieldChange } from "../src/modules/changes";
+import { computeChanges, type FieldChange } from "../src/modules/changes";
 
 // Zotero 运行时 mock，使 applyChanges/undoChanges 测试可在 Node 中运行
 (globalThis as any).Zotero = {
@@ -46,7 +46,7 @@ describe("zoteroWriter", function () {
       ]);
     });
 
-    it("replaces inventor creators in patent items", function () {
+    it("keeps the inventor creator type in patent items", function () {
       const creators: _ZoteroTypes.Item.CreatorJSON[] = [
         { creatorType: "inventor", firstName: "John", lastName: "Smith" },
         { creatorType: "inventor", firstName: "Jane", lastName: "Doe" },
@@ -54,8 +54,8 @@ describe("zoteroWriter", function () {
       const item = createMockItem(creators);
       applyAuthorChange(item, "Smith, John and Doe, Jane");
       assert.deepEqual(creators, [
-        { creatorType: "author", lastName: "Smith", firstName: "John" },
-        { creatorType: "author", lastName: "Doe", firstName: "Jane" },
+        { creatorType: "inventor", lastName: "Smith", firstName: "John" },
+        { creatorType: "inventor", lastName: "Doe", firstName: "Jane" },
       ]);
     });
   });
@@ -354,12 +354,20 @@ describe("zoteroWriter", function () {
   });
 
   describe("formatAuthors", function () {
-    it("formats author creators as a semicolon-separated string", function () {
+    it("joins clean multi-author items with ' and ' so they never need cleaning", function () {
       const authors = formatAuthors([
         { creatorType: "author", firstName: "John", lastName: "Smith" },
         { creatorType: "author", firstName: "Jane", lastName: "Doe" },
       ]);
-      assert.equal(authors, "Smith, John; Doe, Jane");
+      assert.equal(authors, "Smith, John and Doe, Jane");
+    });
+
+    it("keeps semicolons only when a creator itself contains one", function () {
+      const authors = formatAuthors([
+        { creatorType: "author", name: "Zhang San; Li Si" },
+        { creatorType: "author", firstName: "Jane", lastName: "Doe" },
+      ]);
+      assert.equal(authors, "Zhang San; Li Si; Doe, Jane");
     });
 
     it("ignores non-author creators", function () {
@@ -375,7 +383,7 @@ describe("zoteroWriter", function () {
         { creatorType: "inventor", firstName: "John", lastName: "Smith" },
         { creatorType: "inventor", firstName: "Jane", lastName: "Doe" },
       ]);
-      assert.equal(authors, "Smith, John; Doe, Jane");
+      assert.equal(authors, "Smith, John and Doe, Jane");
     });
 
     it("omits comma when firstName is empty", function () {
@@ -383,7 +391,7 @@ describe("zoteroWriter", function () {
         { creatorType: "author", firstName: "霙婧", lastName: "钱" },
         { creatorType: "author", firstName: "", lastName: "乔鹏昊" },
       ]);
-      assert.equal(authors, "钱, 霙婧; 乔鹏昊");
+      assert.equal(authors, "钱, 霙婧 and 乔鹏昊");
     });
 
     it("returns undefined when there are no authors", function () {
@@ -392,6 +400,24 @@ describe("zoteroWriter", function () {
           { creatorType: "editor", firstName: "Jane", lastName: "Doe" },
         ]),
       );
+    });
+
+    it("feeds computeChanges a clean string that produces no author change", function () {
+      const authors = formatAuthors([
+        { creatorType: "author", firstName: "John", lastName: "Smith" },
+        { creatorType: "author", firstName: "Jane", lastName: "Doe" },
+      ]);
+      const changes = computeChanges([
+        {
+          key: "A1",
+          libraryID: 1,
+          title: "论文",
+          author: authors,
+          issue: "3",
+          volume: "10",
+        },
+      ]);
+      assert.deepEqual(changes, [], "干净的多作者条目不应产生清理变更");
     });
   });
 
@@ -424,6 +450,14 @@ describe("zoteroWriter", function () {
       assert.deepEqual(authors, [
         { creatorType: "author", lastName: "Smith", firstName: "John" },
         { creatorType: "author", lastName: "Doe", firstName: "Jane" },
+      ]);
+    });
+
+    it("uses the given creator type for every parsed creator", function () {
+      const authors = parseAuthors("Smith, John and ACME Corp", "inventor");
+      assert.deepEqual(authors, [
+        { creatorType: "inventor", lastName: "Smith", firstName: "John" },
+        { creatorType: "inventor", name: "ACME Corp" },
       ]);
     });
   });

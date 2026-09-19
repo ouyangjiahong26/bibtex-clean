@@ -8,10 +8,13 @@
 import type { Candidate } from "./filterCandidates";
 import type { Locale } from "../utils/locale";
 
+/** 可移入回收站的最小形状：删除管线按 library+key 反查条目。 */
+export type Trashable = { libraryID: number; itemKey: string };
+
 /** 删除一批候选项后的结果。 */
-export type DeleteResult = {
-  succeeded: Candidate[];
-  failed: { candidate: Candidate; error: Error }[];
+export type DeleteResult<T extends Trashable> = {
+  succeeded: T[];
+  failed: { candidate: T; error: Error }[];
 };
 
 /** 候选收集适配器。真实实现读 Zotero 的当前选中项。 */
@@ -27,15 +30,16 @@ export interface FilterDialogAdapter {
 
 /** 删除写入适配器。真实实现把条目移入 Zotero 回收站。 */
 export interface DeleteAdapter {
-  moveToTrash(candidates: Candidate[]): Promise<DeleteResult>;
+  moveToTrash(candidates: Candidate[]): Promise<DeleteResult<Candidate>>;
 }
 
-/** 通知适配器。`showInfo` 与清理流程共用。 */
+/** 通知适配器。`showInfo` 与清理流程共用。失败明细只读标题，供各流程共用。 */
 export interface DeleteNotifierAdapter {
   showInfo(text: string): void;
+  showError(text: string): void;
   showDeleteSuccess(text: string, detail?: string): void;
   showDeleteErrorDetails(
-    failed: { candidate: Candidate; error: Error }[],
+    failed: { candidate: { title: string }; error: Error }[],
   ): void;
 }
 

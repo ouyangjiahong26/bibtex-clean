@@ -11,6 +11,12 @@ import {
   type FilterDeleteAdapters,
 } from "./modules/filterDelete";
 import { openFilterDeleteDialog } from "./modules/filterDialogWindow";
+import {
+  duplicateDeleteSelectedItems,
+  type DuplicateDeleteAdapters,
+} from "./modules/duplicateDelete";
+import { openDuplicateDeleteDialog } from "./modules/duplicateDialogWindow";
+import { collectDuplicateGroups } from "./modules/duplicateAttachments";
 import { registerItemMenu } from "./modules/menuRegistration";
 import {
   applyChanges,
@@ -66,6 +72,22 @@ function createAdapters(locale: Locale) {
       writer: { moveToTrash: moveCandidatesToTrash },
       notifier,
     } satisfies FilterDeleteAdapters,
+    duplicateDelete: {
+      collect: {
+        collectGroups: async (onProgress) =>
+          collectDuplicateGroups(
+            Zotero.getActiveZoteroPane().getSelectedItems(),
+            { onProgress },
+          ),
+      },
+      dialog: {
+        choose: (groups) =>
+          openDuplicateDeleteDialog(groups, undefined, locale.getString),
+      },
+      writer: { moveToTrash: moveCandidatesToTrash },
+      notifier,
+      progress: notifier,
+    } satisfies DuplicateDeleteAdapters,
   };
 }
 
@@ -119,6 +141,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     () => cleanSelectedItems(store, adapters.clean, locale),
     () => undoLastCleanOperation(store, adapters.clean, locale),
     () => filterDeleteSelectedItems(adapters.filterDelete, locale),
+    () => duplicateDeleteSelectedItems(adapters.duplicateDelete, locale),
   );
 }
 

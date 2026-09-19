@@ -140,7 +140,7 @@ async function applyGroup(
 }
 
 export function applyAuthorChange(item: Zotero.Item, newValue: string): void {
-  const newAuthors = parseAuthors(newValue);
+  const newAuthors = parseAuthors(newValue, sharedCreatorType(item));
   const creators = item.getCreatorsJSON();
   const nonAuthors = creators.filter(
     (creator) =>
@@ -149,8 +149,32 @@ export function applyAuthorChange(item: Zotero.Item, newValue: string): void {
   item.setCreators([...newAuthors, ...nonAuthors]);
 }
 
+type CreatorType = _ZoteroTypes.Item.CreatorJSON["creatorType"];
+
+/**
+ * 条目里 author/inventor 共用的那种 creator 类型（专利条目全是 inventor）。
+ * 拆分后的新创作者无法逐段推断原类型，混合或缺失时退回 author。
+ */
+function sharedCreatorType(item: Zotero.Item): CreatorType {
+  const types = new Set(
+    item
+      .getCreatorsJSON()
+      .filter(
+        (creator) =>
+          creator.creatorType === "author" ||
+          creator.creatorType === "inventor",
+      )
+      .map((creator) => creator.creatorType),
+  );
+  return types.size === 1 ? ([...types][0] as CreatorType) : "author";
+}
+
 /**
  * 将 Zotero creator 数组合并为可清理的 author 字符串。
+ *
+ * 仅当某个创作者串自身含 ";"（导入器把整串作者塞进一个 creator）时才用
+ * ";" 连接、交给规则拆分；否则用 " and " 连接，串里没有 ";"，规则不会
+ * 命中——否则任何多作者条目都会永远被判为需要清理。
  */
 export function formatAuthors(
   creators: _ZoteroTypes.Item.CreatorJSON[],
@@ -163,9 +187,14 @@ export function formatAuthors(
     .map((creator) => {
       if (creator.name) return creator.name;
       if (creator.firstName) return `${creator.lastName}, ${creator.firstName}`;
-      return creator.lastName;
+      return creator.lastName ?? "";
     });
-  return authors.length > 0 ? authors.join("; ") : undefined;
+  if (authors.length === 0) {
+    return undefined;
+  }
+  return authors.join(
+    authors.some((author) => author.includes(";")) ? "; " : " and ",
+  );
 }
 
 /**
@@ -173,12 +202,16 @@ export function formatAuthors(
  *
  * 输入可能是清理前的 "Smith, John; Doe, Jane" 或清理后的
  * "Smith, John and Doe, Jane"，因此按 ";" 或 " and " 拆分。
+ * `creatorType` 取自条目现有的 author/inventor 类型（见 sharedCreatorType）。
  *
  * 已知限制：
  * - 含逗号的机构名（如 "ACME, Inc."）会被拆成 lastName/firstName，
  *   当前仅处理个人作者常见的 "Last, First" 格式。
  */
-export function parseAuthors(value: string): _ZoteroTypes.Item.CreatorJSON[] {
+export function parseAuthors(
+  value: string,
+  creatorType: CreatorType = "author",
+): _ZoteroTypes.Item.CreatorJSON[] {
   const separator = value.includes(";") ? ";" : " and ";
   return value
     .split(separator)
@@ -188,13 +221,13 @@ export function parseAuthors(value: string): _ZoteroTypes.Item.CreatorJSON[] {
       const commaIndex = trimmed.indexOf(",");
       if (commaIndex > 0) {
         return {
-          creatorType: "author",
+          creatorType,
           lastName: trimmed.slice(0, commaIndex).trim(),
           firstName: trimmed.slice(commaIndex + 1).trim(),
         };
       }
       return {
-        creatorType: "author",
+        creatorType,
         name: trimmed,
       };
     });

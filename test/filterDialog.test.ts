@@ -14,6 +14,7 @@ import {
 } from "../src/modules/filterDialog";
 import {
   initialState,
+  setAllChecked,
   toggleKind,
   withCondition,
   type FilterDialogState,
@@ -69,7 +70,7 @@ function attr(props: TagElementProps, name: string): unknown {
 describe("filterDialog", function () {
   describe("renderFilterDialog", function () {
     it("offers both kinds and both match modes, with 'all' selected", function () {
-      const data = view(initialState(candidates));
+      const data = view(initialState());
 
       assert.deepEqual(data.kinds, [
         {
@@ -86,7 +87,7 @@ describe("filterDialog", function () {
     });
 
     it("lists the field scopes and operators of a condition row", function () {
-      const data = view(initialState(candidates));
+      const data = view(initialState());
 
       assert.deepEqual(
         data.fields.map((field) => field.value),
@@ -98,8 +99,8 @@ describe("filterDialog", function () {
       );
     });
 
-    it("renders every candidate as a checked row with its own and parent title", function () {
-      const data = view(initialState(candidates));
+    it("renders every candidate as an unchecked row with its own and parent title", function () {
+      const data = view(initialState());
 
       assert.deepEqual(data.rows, [
         {
@@ -107,21 +108,21 @@ describe("filterDialog", function () {
           kindLabel: "dialog-filter-kind-link-attachment",
           title: "超星电子书",
           parentTitle: "论文一",
-          checked: true,
+          checked: false,
         },
         {
           key: candidateKey(note),
           kindLabel: "dialog-filter-kind-note",
           title: "阅读笔记",
           parentTitle: "论文一",
-          checked: true,
+          checked: false,
         },
       ]);
-      assert.equal(data.checkedCount, 2);
+      assert.equal(data.checkedCount, 0);
     });
 
     it("counts checked items and notes in the summary and confirm label", function () {
-      const data = view(initialState(candidates));
+      const data = view(setAllChecked(initialState(), candidates, true));
 
       assert.equal(
         data.checkedSummary,
@@ -134,7 +135,8 @@ describe("filterDialog", function () {
     });
 
     it("drops the note count from the confirm label when no note is checked", function () {
-      const state = toggleKind(initialState(candidates), "note", candidates);
+      const linksOnly = toggleKind(initialState(), "note");
+      const state = setAllChecked(linksOnly, candidates, true);
 
       assert.equal(
         view(state).confirmLabel,
@@ -143,12 +145,11 @@ describe("filterDialog", function () {
     });
 
     it("keeps visible rows unselected after a negated condition, but still lists them", function () {
-      const state = withCondition(
-        initialState(candidates),
-        0,
-        { field: "title", operator: "notContains", value: "超星" },
-        candidates,
-      );
+      const state = withCondition(initialState(), 0, {
+        field: "title",
+        operator: "notContains",
+        value: "超星",
+      });
 
       const data = view(state);
       assert.lengthOf(data.rows, 1);
@@ -162,12 +163,10 @@ describe("filterDialog", function () {
     });
 
     it("carries the empty state when no candidate matches", function () {
-      const state = withCondition(
-        initialState(candidates),
-        0,
-        { field: "title", value: "不存在的关键词" },
-        candidates,
-      );
+      const state = withCondition(initialState(), 0, {
+        field: "title",
+        value: "不存在的关键词",
+      });
 
       const data = view(state);
       assert.deepEqual(data.rows, []);
@@ -176,12 +175,11 @@ describe("filterDialog", function () {
     });
 
     it("exposes the raw condition rows for the condition area", function () {
-      const state = withCondition(
-        initialState(candidates),
-        0,
-        { field: "url", operator: "notContains", value: "chaoxing" },
-        candidates,
-      );
+      const state = withCondition(initialState(), 0, {
+        field: "url",
+        operator: "notContains",
+        value: "chaoxing",
+      });
 
       assert.deepEqual(view(state).conditions, [
         { field: "url", operator: "notContains", value: "chaoxing" },
@@ -191,7 +189,8 @@ describe("filterDialog", function () {
 
   describe("buildCandidateRowItems", function () {
     it("renders a checkbox, badge, title and parent title per row", function () {
-      const items = buildCandidateRowItems(view(initialState(candidates)));
+      const all = setAllChecked(initialState(), candidates, true);
+      const items = buildCandidateRowItems(view(all));
 
       assert.lengthOf(items, 2);
       const [first, second] = items;
@@ -220,12 +219,11 @@ describe("filterDialog", function () {
     });
 
     it("leaves unchecked rows unchecked", function () {
-      const state = withCondition(
-        initialState(candidates),
-        0,
-        { field: "title", operator: "notContains", value: "超星" },
-        candidates,
-      );
+      const state = withCondition(initialState(), 0, {
+        field: "title",
+        operator: "notContains",
+        value: "超星",
+      });
 
       const items = buildCandidateRowItems(view(state));
       assert.lengthOf(items, 1);
@@ -236,12 +234,10 @@ describe("filterDialog", function () {
     });
 
     it("shows the empty state instead of rows", function () {
-      const state = withCondition(
-        initialState(candidates),
-        0,
-        { field: "title", value: "不存在的关键词" },
-        candidates,
-      );
+      const state = withCondition(initialState(), 0, {
+        field: "title",
+        value: "不存在的关键词",
+      });
 
       const items = buildCandidateRowItems(view(state));
       assert.lengthOf(items, 1);
@@ -259,11 +255,7 @@ describe("filterDialog", function () {
         snapshot: false,
       };
 
-      const data = renderFilterDialog(
-        [nasty],
-        initialState([nasty]),
-        mockGetString,
-      );
+      const data = renderFilterDialog([nasty], initialState(), mockGetString);
       const labels = buildCandidateRowItems(data)[0].children?.filter(
         (child) => child.tag === "label",
       );
@@ -281,12 +273,11 @@ describe("filterDialog", function () {
 
   describe("buildConditionRowItems", function () {
     it("builds two selects, a text input and a remove button per row", function () {
-      const state = withCondition(
-        initialState(candidates),
-        0,
-        { field: "note", operator: "notContains", value: "扫描" },
-        candidates,
-      );
+      const state = withCondition(initialState(), 0, {
+        field: "note",
+        operator: "notContains",
+        value: "扫描",
+      });
 
       const items = buildConditionRowItems(view(state));
       assert.lengthOf(items, 1);
@@ -350,7 +341,7 @@ describe("filterDialog", function () {
 
   describe("buildFilterDialogContent", function () {
     it("wires the interactive containers and controls", function () {
-      const content = buildFilterDialogContent(view(initialState(candidates)));
+      const content = buildFilterDialogContent(view(initialState()));
       const nodes = flatten(content);
 
       assert.equal(content.id, FILTER_DIALOG_IDS.root);
@@ -408,12 +399,10 @@ describe("filterDialog", function () {
     });
 
     it("shows the checked summary and empty state text", function () {
-      const state = withCondition(
-        initialState(candidates),
-        0,
-        { field: "title", value: "不存在的关键词" },
-        candidates,
-      );
+      const state = withCondition(initialState(), 0, {
+        field: "title",
+        value: "不存在的关键词",
+      });
 
       const content = buildFilterDialogContent(view(state));
       const nodes = flatten(content);
@@ -433,7 +422,7 @@ describe("filterDialog", function () {
     });
 
     it("marks the clicking targets with the data-* attributes the wiring reads", function () {
-      const content = buildFilterDialogContent(view(initialState(candidates)));
+      const content = buildFilterDialogContent(view(initialState()));
       const nodes = flatten(content);
 
       for (const name of Object.values(FILTER_DIALOG_DATA_KEYS)) {
@@ -453,7 +442,7 @@ describe("filterDialog", function () {
     });
 
     it("keeps the candidate list container reusable for repainting", function () {
-      const data = view(initialState(candidates));
+      const data = view(initialState());
 
       assert.equal(
         buildCandidateRows(data).id,
@@ -468,7 +457,7 @@ describe("filterDialog", function () {
     });
 
     it("gives every element an explicit namespace, and controls use HTML", function () {
-      const data = view(initialState(candidates));
+      const data = view(initialState());
       const nodes = [
         ...flatten(buildFilterDialogContent(data)),
         ...buildConditionRowItems(data).flatMap(flatten),

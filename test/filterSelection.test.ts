@@ -37,7 +37,7 @@ const candidates: Candidate[] = [snapshot, note];
 describe("filterSelection", function () {
   describe("initialState", function () {
     it("starts with both kinds, 'all' matching and a single empty condition", function () {
-      const state = initialState(candidates);
+      const state = initialState();
 
       assert.deepEqual(state.filter.kinds, ["link-attachment", "note"]);
       assert.equal(state.filter.match, "all");
@@ -46,95 +46,79 @@ describe("filterSelection", function () {
       ]);
     });
 
-    it("checks every candidate before any filtering", function () {
-      assert.deepEqual(initialState(candidates).checkedKeys, [
-        candidateKey(snapshot),
-        candidateKey(note),
-      ]);
+    it("checks nothing before any filtering", function () {
+      assert.deepEqual(initialState().checkedKeys, []);
     });
   });
 
   describe("withFilter-driven transitions", function () {
-    it("recomputes checked rows for the new visible set", function () {
-      const state = initialState(candidates);
-      const manual = toggleChecked(state, candidateKey(note));
+    it("clears checked rows when a kind is toggled", function () {
+      const manual = toggleChecked(initialState(), candidateKey(note));
 
-      const filtered = toggleKind(manual, "note", candidates);
+      const filtered = toggleKind(manual, "note");
 
       assert.deepEqual(filtered.filter.kinds, ["link-attachment"]);
-      assert.deepEqual(filtered.checkedKeys, [candidateKey(snapshot)]);
+      assert.deepEqual(filtered.checkedKeys, []);
     });
 
     it("leaves nothing checked when no kind is selected", function () {
-      const state = toggleKind(initialState(candidates), "note", candidates);
-      const bothOff = toggleKind(state, "link-attachment", candidates);
+      const state = toggleKind(initialState(), "note");
+      const bothOff = toggleKind(state, "link-attachment");
 
       assert.deepEqual(bothOff.filter.kinds, []);
       assert.deepEqual(bothOff.checkedKeys, []);
     });
 
-    it("re-filters when a second condition is added", function () {
-      const base = initialState(candidates);
-      const titled = withCondition(
-        base,
-        0,
-        { field: "title", value: "超星" },
-        candidates,
-      );
-      assert.deepEqual(titled.checkedKeys, [candidateKey(snapshot)]);
+    it("clears checked rows when a second condition is added", function () {
+      const titled = withCondition(initialState(), 0, {
+        field: "title",
+        value: "超星",
+      });
+      assert.deepEqual(titled.checkedKeys, []);
 
       // 全部模式下第二行把快照排除掉：快照没有笔记正文
-      const withNoteRow = addCondition(titled, candidates);
-      const both = withCondition(
-        withNoteRow,
-        1,
-        { field: "note", value: "扫描版" },
-        candidates,
-      );
+      const withNoteRow = addCondition(titled);
+      const both = withCondition(withNoteRow, 1, {
+        field: "note",
+        value: "扫描版",
+      });
       assert.deepEqual(both.checkedKeys, []);
     });
 
-    it("switching to 'any' re-checks the union of matches", function () {
-      const base = initialState(candidates);
-      const titled = withCondition(
-        base,
-        0,
-        { field: "title", value: "超星" },
-        candidates,
-      );
-      const withNoteRow = addCondition(titled, candidates);
-      const both = withCondition(
-        withNoteRow,
-        1,
-        { field: "note", value: "扫描版" },
-        candidates,
-      );
+    it("switching to 'any' clears the checked rows", function () {
+      const titled = withCondition(initialState(), 0, {
+        field: "title",
+        value: "超星",
+      });
+      const withNoteRow = addCondition(titled);
+      const both = withCondition(withNoteRow, 1, {
+        field: "note",
+        value: "扫描版",
+      });
 
-      const anyMode = withMatchMode(both, "any", candidates);
+      const anyMode = withMatchMode(both, "any");
 
       assert.equal(anyMode.filter.match, "any");
-      assert.deepEqual(anyMode.checkedKeys, [
-        candidateKey(snapshot),
-        candidateKey(note),
-      ]);
+      assert.deepEqual(anyMode.checkedKeys, []);
     });
 
-    it("unchecks every visible row as soon as a negation is active", function () {
-      const state = withCondition(
-        initialState(candidates),
-        0,
-        { field: "title", operator: "notContains", value: "超星" },
-        candidates,
-      );
+    it("clears manual selections as soon as a negated condition is active", function () {
+      // 旧版含否定条件时默认不勾选的特例已取消：现在条件变化一律清空勾选
+      const checked = toggleChecked(initialState(), candidateKey(snapshot));
 
-      assert.deepEqual(state.checkedKeys, []);
-      assert.deepEqual(checkedCandidates(candidates, state), []);
+      const changed = withCondition(checked, 0, {
+        operator: "notContains",
+        value: "超星",
+      });
+
+      assert.deepEqual(changed.checkedKeys, []);
+      assert.deepEqual(checkedCandidates(candidates, changed), []);
     });
   });
 
   describe("condition rows", function () {
     it("adds a new empty row without changing visibility", function () {
-      const state = addCondition(initialState(candidates), candidates);
+      const state = addCondition(initialState());
 
       assert.lengthOf(state.filter.conditions, 2);
       assert.deepEqual(state.filter.conditions[1], {
@@ -142,88 +126,68 @@ describe("filterSelection", function () {
         operator: "contains",
         value: "",
       });
-      assert.deepEqual(state.checkedKeys, [
-        candidateKey(snapshot),
-        candidateKey(note),
-      ]);
+      assert.deepEqual(state.checkedKeys, []);
     });
 
     it("keeps at least one row when the last one is removed", function () {
-      const state = removeCondition(initialState(candidates), 0, candidates);
+      const state = removeCondition(initialState(), 0);
 
       assert.lengthOf(state.filter.conditions, 1);
       assert.equal(state.filter.conditions[0].value, "");
     });
 
     it("removes the addressed row", function () {
-      const two = addCondition(initialState(candidates), candidates);
-      const addressed = withCondition(two, 0, { value: "超星" }, candidates);
+      const two = addCondition(initialState());
+      const addressed = withCondition(two, 0, { value: "超星" });
 
-      const state = removeCondition(addressed, 1, candidates);
+      const state = removeCondition(addressed, 1);
 
       assert.lengthOf(state.filter.conditions, 1);
       assert.equal(state.filter.conditions[0].value, "超星");
     });
 
     it("ignores an out-of-range index", function () {
-      const state = initialState(candidates);
+      const state = initialState();
       assert.deepEqual(
-        removeCondition(state, 5, candidates).filter.conditions,
+        removeCondition(state, 5).filter.conditions,
         state.filter.conditions,
       );
       assert.deepEqual(
-        withCondition(state, 5, { value: "x" }, candidates).filter.conditions,
+        withCondition(state, 5, { value: "x" }).filter.conditions,
         state.filter.conditions,
       );
     });
 
     it("keeps manual selections when the same value is applied again", function () {
       // 焦点进出下拉框会用同一个值再走一遍 withCondition；
-      // 条件没变就不该按默认规则重算，否则用户手改的勾选会被冲掉。
-      const unchecked = setAllChecked(
-        initialState(candidates),
-        candidates,
-        false,
-      );
+      // 条件没变就不该清空勾选，否则用户手改的勾选会被冲掉。
+      const checked = toggleChecked(initialState(), candidateKey(snapshot));
 
-      const same = withCondition(unchecked, 0, { value: "" }, candidates);
+      const same = withCondition(checked, 0, { value: "" });
 
-      assert.deepEqual(same.checkedKeys, []);
+      assert.deepEqual(same.checkedKeys, [candidateKey(snapshot)]);
     });
 
-    it("recomputes when the value actually changes", function () {
-      const unchecked = setAllChecked(
-        initialState(candidates),
-        candidates,
-        false,
-      );
+    it("clears checked rows when the value actually changes", function () {
+      const checked = toggleChecked(initialState(), candidateKey(note));
 
-      const changed = withCondition(
-        unchecked,
-        0,
-        { value: "超星" },
-        candidates,
-      );
+      const changed = withCondition(checked, 0, { value: "超星" });
 
-      assert.deepEqual(changed.checkedKeys, [candidateKey(snapshot)]);
+      assert.deepEqual(changed.checkedKeys, []);
     });
   });
 
   describe("manual selection", function () {
     it("toggles a single row without re-filtering", function () {
-      const state = initialState(candidates);
-      const unchecked = toggleChecked(state, candidateKey(snapshot));
-      assert.deepEqual(unchecked.checkedKeys, [candidateKey(note)]);
+      const checked = toggleChecked(initialState(), candidateKey(snapshot));
+      assert.deepEqual(checked.checkedKeys, [candidateKey(snapshot)]);
 
-      const rechecked = toggleChecked(unchecked, candidateKey(snapshot));
-      assert.deepEqual(rechecked.checkedKeys, [
-        candidateKey(note),
-        candidateKey(snapshot),
-      ]);
+      const unchecked = toggleChecked(checked, candidateKey(snapshot));
+      assert.deepEqual(unchecked.checkedKeys, []);
     });
 
     it("checks and unchecks every visible row", function () {
-      const base = toggleKind(initialState(candidates), "note", candidates);
+      const base = toggleKind(initialState(), "note");
 
       const none = setAllChecked(base, candidates, false);
       assert.deepEqual(none.checkedKeys, []);
@@ -232,17 +196,20 @@ describe("filterSelection", function () {
       assert.deepEqual(all.checkedKeys, [candidateKey(snapshot)]);
     });
 
-    it("checks only visible rows even if a hidden key was checked before", function () {
-      const state = initialState(candidates);
-      const narrowed = withCondition(
-        state,
-        0,
-        { field: "title", value: "超星" },
-        candidates,
-      );
+    it("reports only checked rows that are visible under the current filter", function () {
+      // checkedKeys 里可能留着已不可见行的 key；
+      // checkedCandidates 只回当前可见的勾选行
+      const state: FilterDialogState = {
+        ...initialState(),
+        checkedKeys: [candidateKey(snapshot), candidateKey(note)],
+      };
+      const withoutNotes: FilterDialogState = {
+        ...state,
+        filter: { ...state.filter, kinds: ["link-attachment"] },
+      };
 
       assert.deepEqual(
-        checkedCandidates(candidates, narrowed).map(candidateKey),
+        checkedCandidates(candidates, withoutNotes).map(candidateKey),
         [candidateKey(snapshot)],
       );
     });

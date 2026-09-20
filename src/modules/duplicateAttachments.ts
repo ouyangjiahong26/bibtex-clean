@@ -12,13 +12,18 @@ import {
   type DuplicateGroup,
 } from "./duplicateGroups";
 
-/** 文件附件：导入文件（imported_file）与链接文件（linked_file）。 */
+/**
+ * 文件附件：导入文件（imported_file）、链接文件（linked_file），以及带来源
+ * 网址的存储文档（imported_url 且非网页快照，如抓取器保存的 PDF 全文）。
+ */
 function isFileAttachment(item: Zotero.Item): boolean {
   // linkMode 运行时是数字常量，先取数字再比较，理由同 isLinkAttachment。
   const mode: number = item.attachmentLinkMode;
   return (
     mode === Zotero.Attachments.LINK_MODE_IMPORTED_FILE ||
-    mode === Zotero.Attachments.LINK_MODE_LINKED_FILE
+    mode === Zotero.Attachments.LINK_MODE_LINKED_FILE ||
+    (mode === Zotero.Attachments.LINK_MODE_IMPORTED_URL &&
+      !item.isSnapshotAttachment())
   );
 }
 

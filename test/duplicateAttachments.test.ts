@@ -19,6 +19,7 @@ type MockItemOptions = {
   title?: string;
   url?: string;
   linkMode?: number;
+  contentType?: string;
   filename?: string;
   dateAdded?: string;
   annotationCount?: number;
@@ -38,11 +39,15 @@ function createMockItem(options: MockItemOptions): MockItem {
     libraryID: options.libraryID ?? 1,
     parentItemID: false,
     attachmentLinkMode: options.linkMode ?? LINK_MODES.LINK_MODE_IMPORTED_FILE,
+    attachmentContentType: options.contentType ?? "",
     attachmentFilename: options.filename,
     dateAdded: options.dateAdded ?? "2024-01-01 00:00:00",
     isRegularItem: () => options.kind === "regular",
     isAttachment: () => options.kind === "attachment",
     isNote: () => options.kind === "note",
+    isSnapshotAttachment: () =>
+      options.linkMode === LINK_MODES.LINK_MODE_IMPORTED_URL &&
+      options.contentType === "text/html",
     getField: (field: string) => {
       if (field === "title") return options.title ?? "";
       if (field === "url") return options.url ?? "";
@@ -147,6 +152,7 @@ describe("duplicateAttachments", function () {
           key: "S1",
           kind: "attachment",
           linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+          contentType: "text/html",
           url: "https://example.com/page",
           numAnnotationsThrows: true,
         }),
@@ -188,6 +194,27 @@ describe("duplicateAttachments", function () {
       );
     });
 
+    it("treats stored full-text PDFs saved with a source URL as file attachments", function () {
+      // 抓取器保存的 PDF 全文是 imported_url 但非网页快照：按文件附件判重，
+      // numAnnotations() 生效
+      const fullTextPdf = toDuplicateAttachment(
+        createMockItem({
+          key: "P1",
+          kind: "attachment",
+          linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+          contentType: "application/pdf",
+          filename: "paper.pdf",
+          annotationCount: 3,
+        }),
+        "论文一",
+        "1\x00P1",
+      );
+
+      assert.equal(fullTextPdf?.kind, "file-attachment");
+      assert.equal(fullTextPdf?.filename, "paper.pdf");
+      assert.equal(fullTextPdf?.annotationCount, 3);
+    });
+
     it("rejects notes and regular items", function () {
       assert.isUndefined(
         toDuplicateAttachment(
@@ -227,6 +254,49 @@ describe("duplicateAttachments", function () {
           kind: "attachment",
           linkMode: LINK_MODES.LINK_MODE_IMPORTED_FILE,
           title: "合并带来的副本",
+          filename: "paper.pdf",
+          dateAdded: "2024-01-01 00:00:00",
+        }),
+      );
+      const parent = createMockItem({
+        key: "P1",
+        kind: "regular",
+        title: "论文一",
+        attachments: [1, 2],
+      });
+
+      const groups = await collectDuplicateGroups([parent], {
+        wait: async () => {},
+      });
+
+      assert.lengthOf(groups, 1);
+      assert.equal(groups[0].groupKey, "paper.pdf");
+      assert.equal(groups[0].members[0].itemKey, keep.key);
+      assert.equal(groups[0].keepKey, "1\x00KEEP");
+    });
+
+    it("groups full-text PDFs saved with a source URL by filename within a parent", async function () {
+      const keep = registerItem(
+        1,
+        createMockItem({
+          key: "KEEP",
+          kind: "attachment",
+          linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+          contentType: "application/pdf",
+          title: "带批注的全文",
+          filename: "paper.pdf",
+          dateAdded: "2024-06-01 00:00:00",
+          annotationCount: 5,
+        }),
+      );
+      registerItem(
+        2,
+        createMockItem({
+          key: "DROP",
+          kind: "attachment",
+          linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+          contentType: "application/pdf",
+          title: "合并带来的全文",
           filename: "paper.pdf",
           dateAdded: "2024-01-01 00:00:00",
         }),
@@ -291,6 +361,7 @@ describe("duplicateAttachments", function () {
           key: "S1",
           kind: "attachment",
           linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+          contentType: "text/html",
           url: "https://example.com/page",
           numAnnotationsThrows: true,
         }),

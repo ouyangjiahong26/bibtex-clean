@@ -117,19 +117,3 @@ export function filterCandidates(
       : conditions.some((condition) => matchesCondition(candidate, condition));
   });
 }
-
-/**
- * 可见行的默认勾选状态。
- *
- * 含 `不包含` 条件时默认不勾选：否则 `标题 不包含 扫描版` 这类条件会把
- * 几乎所有候选标成可见并勾上，一键删除面极大。
- */
-export function defaultCheckedKeys(
-  visible: Candidate[],
-  conditions: FilterCondition[],
-): string[] {
-  const hasNegation = activeConditions(conditions).some(
-    (condition) => condition.operator === "notContains",
-  );
-  return hasNegation ? [] : visible.map(candidateKey);
-}

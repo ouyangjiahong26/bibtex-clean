@@ -15,7 +15,12 @@ const DELETE_CONCURRENCY_PREF = `${config.prefsPrefix}.deleteConcurrency`;
 const DEFAULT_DELETE_CONCURRENCY = 4;
 const MAX_DELETE_CONCURRENCY = 20;
 
-/** 链接附件：网页快照（imported_url）与网页链接（linked_url）。 */
+/**
+ * 链接附件：网页快照（imported_url 的 HTML 副本）与网页链接（linked_url）。
+ * 抓取器保存的 PDF/EPUB 全文也是 imported_url（带来源网址的存储文档，
+ * contentType application/pdf 等），不算网页快照；快照判定委托给 Zotero 的
+ * isSnapshotAttachment()（imported_url 且 text/html）。
+ */
 export function isLinkAttachment(item: Zotero.Item): boolean {
   if (!item.isAttachment()) {
     return false;
@@ -24,8 +29,9 @@ export function isLinkAttachment(item: Zotero.Item): boolean {
   // 在类型里是枚举，直接与数字字面量比较会被判为无重叠，故先取数字。
   const mode: number = item.attachmentLinkMode;
   return (
-    mode === Zotero.Attachments.LINK_MODE_IMPORTED_URL ||
-    mode === Zotero.Attachments.LINK_MODE_LINKED_URL
+    mode === Zotero.Attachments.LINK_MODE_LINKED_URL ||
+    (mode === Zotero.Attachments.LINK_MODE_IMPORTED_URL &&
+      item.isSnapshotAttachment())
   );
 }
 

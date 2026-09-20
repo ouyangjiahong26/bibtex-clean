@@ -23,6 +23,7 @@ type MockItemOptions = {
   title?: string;
   url?: string;
   linkMode?: number;
+  contentType?: string;
   filePath?: string | false;
   note?: string;
   attachments?: number[];
@@ -40,10 +41,14 @@ function createMockItem(options: MockItemOptions): MockItem {
     libraryID: options.libraryID ?? 1,
     parentItemID: options.parentItemID ?? false,
     attachmentLinkMode: options.linkMode ?? LINK_MODES.LINK_MODE_IMPORTED_FILE,
+    attachmentContentType: options.contentType ?? "",
     deleted: false,
     isRegularItem: () => options.kind === "regular",
     isAttachment: () => options.kind === "attachment",
     isNote: () => options.kind === "note",
+    isSnapshotAttachment: () =>
+      options.linkMode === LINK_MODES.LINK_MODE_IMPORTED_URL &&
+      options.contentType === "text/html",
     getField: (field: string) => {
       if (field === "title") return options.title ?? "";
       if (field === "url") return options.url ?? "";
@@ -127,6 +132,7 @@ describe("zoteroChildren", function () {
         key: "A1",
         kind: "attachment",
         linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+        contentType: "text/html",
       });
       const webLink = createMockItem({
         key: "A2",
@@ -157,6 +163,19 @@ describe("zoteroChildren", function () {
       assert.isFalse(isLinkAttachment(note));
       assert.isFalse(isLinkAttachment(regular));
     });
+
+    it("rejects stored documents saved with a source URL, such as full-text PDFs", function () {
+      // 抓取器把带来源网址的下载文件存成 imported_url，contentType 是 PDF 等
+      const fullTextPdf = createMockItem({
+        key: "A5",
+        kind: "attachment",
+        linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+        contentType: "application/pdf",
+        title: "Full Text PDF",
+      });
+
+      assert.isFalse(isLinkAttachment(fullTextPdf));
+    });
   });
 
   describe("toCandidate", function () {
@@ -165,6 +184,7 @@ describe("zoteroChildren", function () {
         key: "A1",
         kind: "attachment",
         linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+        contentType: "text/html",
         title: "超星电子书",
         url: "https://book.chaoxing.com/Reader/1",
         filePath: "/storage/A1/index.html",
@@ -240,6 +260,19 @@ describe("zoteroChildren", function () {
         ),
       );
     });
+
+    it("returns undefined for a full-text PDF saved with a source URL", function () {
+      const fullTextPdf = createMockItem({
+        key: "A5",
+        kind: "attachment",
+        linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+        contentType: "application/pdf",
+        title: "Full Text PDF",
+        url: "https://example.com/paper.pdf",
+      });
+
+      assert.isUndefined(toCandidate(fullTextPdf, "论文一"));
+    });
   });
 
   describe("collectCandidates", function () {
@@ -250,6 +283,7 @@ describe("zoteroChildren", function () {
           key: "A1",
           kind: "attachment",
           linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+          contentType: "text/html",
           title: "快照",
         }),
       );
@@ -284,6 +318,47 @@ describe("zoteroChildren", function () {
       assert.equal(candidates[1].kind, "note");
       assert.equal(snapshot.key, "A1");
       assert.equal(note.key, "N1");
+    });
+
+    it("excludes full-text PDFs saved with a source URL, keeping snapshots and notes", function () {
+      registerItem(
+        2,
+        createMockItem({
+          key: "A1",
+          kind: "attachment",
+          linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+          contentType: "application/pdf",
+          title: "Full Text PDF",
+        }),
+      );
+      registerItem(
+        3,
+        createMockItem({
+          key: "A2",
+          kind: "attachment",
+          linkMode: LINK_MODES.LINK_MODE_IMPORTED_URL,
+          contentType: "text/html",
+          title: "快照",
+        }),
+      );
+      registerItem(
+        4,
+        createMockItem({ key: "N1", kind: "note", title: "笔记" }),
+      );
+      const parent = createMockItem({
+        key: "R1",
+        kind: "regular",
+        title: "论文一",
+        attachments: [2, 3],
+        notes: [4],
+      });
+
+      const candidates = collectCandidates([parent]);
+
+      assert.deepEqual(
+        candidates.map((candidate) => candidate.itemKey),
+        ["A2", "N1"],
+      );
     });
 
     it("never includes the selected parent item itself", function () {

@@ -2,7 +2,6 @@ import { assert } from "chai";
 import {
   activeConditions,
   candidateKey,
-  defaultCheckedKeys,
   filterCandidates,
   matchesCondition,
   type Candidate,
@@ -248,36 +247,6 @@ describe("filterCandidates", function () {
         snapshot,
         linkedUrl,
       ]);
-    });
-  });
-
-  describe("defaultCheckedKeys", function () {
-    it("checks every visible row when no condition negates", function () {
-      const visible = filterCandidates(candidates, filter());
-      assert.deepEqual(
-        defaultCheckedKeys(visible, [condition({ value: "超星" })]),
-        visible.map(candidateKey),
-      );
-    });
-
-    it("checks nothing when any active condition negates", function () {
-      const conditions = [
-        condition({ value: "超星" }),
-        condition({ operator: "notContains", value: "扫描" }),
-      ];
-      assert.deepEqual(
-        defaultCheckedKeys(filterCandidates(candidates, filter()), conditions),
-        [],
-      );
-    });
-
-    it("ignores negated rows whose value is empty", function () {
-      const conditions = [condition({ operator: "notContains", value: "" })];
-      const visible = filterCandidates(candidates, filter());
-      assert.deepEqual(
-        defaultCheckedKeys(visible, conditions),
-        visible.map(candidateKey),
-      );
     });
   });
 });

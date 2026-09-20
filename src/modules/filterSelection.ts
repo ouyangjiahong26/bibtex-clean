@@ -1,13 +1,13 @@
 /**
  * 筛选对话框的勾选状态：纯函数推进，不依赖 DOM。
  *
- * 对话框即模拟运行：条件一变，勾选按新的可见集重算，用户此前的勾选与
- * 取消都作废。这样点击删除前，屏幕上的勾选集就是待删集。
+ * 对话框即模拟运行：条件一变，勾选清空，用户此前的勾选与取消都作废，
+ * 点击删除前屏幕上的勾选集就是待删集。默认一律不勾选——默认全勾时，
+ * 一次误点「删除选中」就会删光全部可见行；批量勾选由「全选」按钮承担。
  */
 
 import {
   candidateKey,
-  defaultCheckedKeys,
   filterCandidates,
   type Candidate,
   type CandidateFilter,
@@ -26,19 +26,12 @@ export function emptyCondition(): FilterCondition {
   return { field: "any", operator: "contains", value: "" };
 }
 
-function stateFor(
-  candidates: Candidate[],
-  filter: CandidateFilter,
-): FilterDialogState {
-  const visible = filterCandidates(candidates, filter);
-  return {
-    filter,
-    checkedKeys: defaultCheckedKeys(visible, filter.conditions),
-  };
+function stateFor(filter: CandidateFilter): FilterDialogState {
+  return { filter, checkedKeys: [] };
 }
 
-export function initialState(candidates: Candidate[]): FilterDialogState {
-  return stateFor(candidates, {
+export function initialState(): FilterDialogState {
+  return stateFor({
     kinds: ["link-attachment", "note"],
     match: "all",
     conditions: [emptyCondition()],
@@ -49,21 +42,19 @@ export function initialState(candidates: Candidate[]): FilterDialogState {
 export function toggleKind(
   state: FilterDialogState,
   kind: CandidateKind,
-  candidates: Candidate[],
 ): FilterDialogState {
   const kinds = state.filter.kinds.includes(kind)
     ? state.filter.kinds.filter((selected) => selected !== kind)
     : [...state.filter.kinds, kind];
-  return stateFor(candidates, { ...state.filter, kinds });
+  return stateFor({ ...state.filter, kinds });
 }
 
 /** 切换条件行之间的组合方式。 */
 export function withMatchMode(
   state: FilterDialogState,
   match: MatchMode,
-  candidates: Candidate[],
 ): FilterDialogState {
-  return stateFor(candidates, { ...state.filter, match });
+  return stateFor({ ...state.filter, match });
 }
 
 /** 修改一行条件的字段范围、运算符或值。 */
@@ -71,7 +62,6 @@ export function withCondition(
   state: FilterDialogState,
   index: number,
   patch: Partial<FilterCondition>,
-  candidates: Candidate[],
 ): FilterDialogState {
   const current = state.filter.conditions[index];
   const changed =
@@ -79,7 +69,7 @@ export function withCondition(
     Object.entries(patch).some(
       ([name, value]) => current[name as keyof FilterCondition] !== value,
     );
-  // 条件没变就不重算：重算等于按默认规则重置勾选，而焦点进出下拉框会用同一个值
+  // 条件没变就不重算：重算等于清空勾选，而焦点进出下拉框会用同一个值
   // 再走一遍这里（Zotero 7 上 ztoolkit 的自绘下拉改值后只 blur）。越界的索引同此。
   if (!changed) {
     return state;
@@ -88,15 +78,12 @@ export function withCondition(
   const conditions = state.filter.conditions.map((condition, position) =>
     position === index ? { ...condition, ...patch } : condition,
   );
-  return stateFor(candidates, { ...state.filter, conditions });
+  return stateFor({ ...state.filter, conditions });
 }
 
 /** 末尾追加一行空条件。 */
-export function addCondition(
-  state: FilterDialogState,
-  candidates: Candidate[],
-): FilterDialogState {
-  return stateFor(candidates, {
+export function addCondition(state: FilterDialogState): FilterDialogState {
+  return stateFor({
     ...state.filter,
     conditions: [...state.filter.conditions, emptyCondition()],
   });
@@ -106,12 +93,11 @@ export function addCondition(
 export function removeCondition(
   state: FilterDialogState,
   index: number,
-  candidates: Candidate[],
 ): FilterDialogState {
   const remaining = state.filter.conditions.filter(
     (_condition, position) => position !== index,
   );
-  return stateFor(candidates, {
+  return stateFor({
     ...state.filter,
     conditions: remaining.length > 0 ? remaining : [emptyCondition()],
   });

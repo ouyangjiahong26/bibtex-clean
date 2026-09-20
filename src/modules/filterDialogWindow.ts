@@ -63,7 +63,7 @@ export async function openFilterDeleteDialog(
   getStringFn?: StringGetter,
 ): Promise<Candidate[] | undefined> {
   const fn = getStringFn ?? (getString as StringGetter);
-  let state = initialState(candidates);
+  let state = initialState();
 
   const dialog = new ztoolkit.Dialog(1, 1);
   const dialogData: FilterDialogDataObject = {};
@@ -144,28 +144,22 @@ export async function openFilterDeleteDialog(
       const key = target.getAttribute(FILTER_DIALOG_DATA_KEYS.candidate);
 
       if (kind !== null) {
-        apply(toggleKind(state, kind as CandidateKind, candidates));
+        apply(toggleKind(state, kind as CandidateKind));
       } else if (match !== null) {
-        apply(withMatchMode(state, match as MatchMode, candidates));
+        apply(withMatchMode(state, match as MatchMode));
       } else if (key !== null) {
         apply(toggleChecked(state, key));
       } else if (role === FILTER_DIALOG_ROLES.field) {
         apply(
-          withCondition(
-            state,
-            conditionIndexOf(target),
-            { field: readValue(target) as FilterField },
-            candidates,
-          ),
+          withCondition(state, conditionIndexOf(target), {
+            field: readValue(target) as FilterField,
+          }),
         );
       } else if (role === FILTER_DIALOG_ROLES.operator) {
         apply(
-          withCondition(
-            state,
-            conditionIndexOf(target),
-            { operator: readValue(target) as FilterOperator },
-            candidates,
-          ),
+          withCondition(state, conditionIndexOf(target), {
+            operator: readValue(target) as FilterOperator,
+          }),
         );
       }
     });
@@ -179,12 +173,9 @@ export async function openFilterDeleteDialog(
         return;
       }
       apply(
-        withCondition(
-          state,
-          conditionIndexOf(target),
-          { value: readValue(target) },
-          candidates,
-        ),
+        withCondition(state, conditionIndexOf(target), {
+          value: readValue(target),
+        }),
       );
     };
     root.addEventListener("input", onValueChanged);
@@ -194,16 +185,13 @@ export async function openFilterDeleteDialog(
       const role = target.getAttribute(FILTER_DIALOG_DATA_KEYS.role);
 
       if (target.id === FILTER_DIALOG_IDS.addCondition) {
-        apply(addCondition(state, candidates), true);
+        apply(addCondition(state), true);
       } else if (target.id === FILTER_DIALOG_IDS.selectAll) {
         apply(setAllChecked(state, candidates, true));
       } else if (target.id === FILTER_DIALOG_IDS.selectNone) {
         apply(setAllChecked(state, candidates, false));
       } else if (role === FILTER_DIALOG_ROLES.removeCondition) {
-        apply(
-          removeCondition(state, conditionIndexOf(target), candidates),
-          true,
-        );
+        apply(removeCondition(state, conditionIndexOf(target)), true);
       }
     });
 
@@ -225,7 +213,6 @@ export async function openFilterDeleteDialog(
           role === FILTER_DIALOG_ROLES.field
             ? { field: readValue(target) as FilterField }
             : { operator: readValue(target) as FilterOperator },
-          candidates,
         ),
       );
     });

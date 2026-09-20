@@ -103,7 +103,7 @@ describe("filterSelection", function () {
     });
 
     it("clears manual selections as soon as a negated condition is active", function () {
-      // 旧版「含否定条件时默认不勾选」的特例已取消：现在条件变化一律清空勾选
+      // 旧版含否定条件时默认不勾选的特例已取消：现在条件变化一律清空勾选
       const checked = toggleChecked(initialState(), candidateKey(snapshot));
 
       const changed = withCondition(checked, 0, {

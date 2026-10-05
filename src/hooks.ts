@@ -110,7 +110,7 @@ async function onStartup() {
 
 /**
  * 注册设置页：删除的并行数量在这里调整。
- * 注册失败只记录，不让插件启动失败——设置页缺失不影响清理与删除本身。
+ * 注册失败只记录，不让插件启动失败（设置页缺失不影响清理与删除本身）。
  */
 async function registerPreferencesPane(): Promise<void> {
   try {

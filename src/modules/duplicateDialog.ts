@@ -1,8 +1,8 @@
 /**
  * 清理重复附件对话框的纯数据层与元素树层。
  *
- * 1. renderDuplicateDialog — 纯数据：组标题、成员行、勾选计数与按钮文案
- * 2. buildDuplicateDialogContent / buildGroupItems — 生成 ztoolkit 的
+ * 1. renderDuplicateDialog：纯数据，提供组标题、成员行、勾选计数与按钮文案
+ * 2. buildDuplicateDialogContent / buildGroupItems：生成 ztoolkit 的
  *    ElementProps 树
  *
  * 布局与命名空间分工沿用 filterDialog.ts 的实测结论：容器与文字用 XUL，

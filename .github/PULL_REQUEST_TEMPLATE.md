@@ -1,6 +1,6 @@
 <!--
 AI 生成的 PR 标题必须以 [AI Generated] 开头，并打上 ai-generated 标签。
-规范见 CONTRIBUTING.md 的「AI 贡献」一节。
+标准见 CONTRIBUTING.md 的“AI 贡献”一节。
 -->
 
 ## 关联

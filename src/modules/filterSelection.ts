@@ -2,8 +2,8 @@
  * 筛选对话框的勾选状态：纯函数推进，不依赖 DOM。
  *
  * 对话框即模拟运行：条件一变，勾选清空，用户此前的勾选与取消都作废，
- * 点击删除前屏幕上的勾选集就是待删集。默认一律不勾选——默认全勾时，
- * 一次误点删除选中就会删光全部可见行；批量勾选由全选按钮承担。
+ * 点击删除前屏幕上的勾选集就是待删集。默认一律不勾选（默认全勾时，
+ * 一次误点删除选中就会删光全部可见行），批量勾选由全选按钮承担。
  */
 
 import {
@@ -89,7 +89,7 @@ export function addCondition(state: FilterDialogState): FilterDialogState {
   });
 }
 
-/** 移除一行条件；移除最后一行时补回一行空条件。 */
+/** 移除一行条件。移除最后一行时补回一行空条件。 */
 export function removeCondition(
   state: FilterDialogState,
   index: number,

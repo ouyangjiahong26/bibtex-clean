@@ -173,8 +173,8 @@ function sharedCreatorType(item: Zotero.Item): CreatorType {
  * 将 Zotero creator 数组合并为可清理的 author 字符串。
  *
  * 仅当某个创作者串自身含 ";"（导入器把整串作者塞进一个 creator）时才用
- * ";" 连接、交给规则拆分；否则用 " and " 连接，串里没有 ";"，规则不会
- * 命中——否则任何多作者条目都会永远被判为需要清理。
+ * ";" 连接交给规则拆分。否则用 " and " 连接，串里没有 ";"，规则不会
+ * 命中（否则任何多作者条目都会永远被判为需要清理）。
  */
 export function formatAuthors(
   creators: _ZoteroTypes.Item.CreatorJSON[],

@@ -1,13 +1,13 @@
 /**
  * 筛选删除对话框的纯数据层与元素树层。
  *
- * 1. renderFilterDialog — 纯数据，给条件区、候选列表与按钮提供文案与行数据
- * 2. buildFilterDialogContent / buildConditionRows / buildCandidateRows — 生成
+ * 1. renderFilterDialog：纯数据，给条件区、候选列表与按钮提供文案与行数据
+ * 2. buildFilterDialogContent / buildConditionRows / buildCandidateRows：生成
  *    ztoolkit 的 ElementProps 树
  *
  * 控件用原生 XUL（menulist / textbox / checkbox / radio / button）：这个对话框
  * 是 chrome 里的 XUL 文档，原生 select 的弹出层在 Zotero 7（Gecko 115）上不可用，
- * ztoolkit 也要为此打补丁；XUL 控件是 Zotero 自己用的那条路。
+ * ztoolkit 也要为此打补丁。XUL 控件是 Zotero 自己用的那条路。
  *
  * 打开对话框与事件绑定在 filterDialogWindow.ts。
  */
@@ -195,10 +195,10 @@ export const FILTER_DIALOG_ROLES = {
  *
  * 两条实测结论决定了这个分工：
  * 1. ztoolkit 在 tag 同时属于 HTML 与 XUL 时优先 HTML，label 与 button 因此会被
- *    建成 HTML 元素；XUL 的容器文字元素（label）必须显式写 xul 才会渲染。
+ *    建成 HTML 元素。XUL 的容器文字元素（label）必须显式写 xul 才会渲染。
  * 2. Zotero 的 XUL 控件（checkbox / radio / menulist）在插件对话框文档里不渲染
- *    自身文字（只有框），而 HTML 控件与其 innerHTML 文字正常——ztoolkit 自己的
- *    对话框按钮就是 HTML button + innerHTML。
+ *    自身文字（只有框），而 HTML 控件与其 innerHTML 文字正常（ztoolkit 自己的
+ *    对话框按钮就是 HTML button + innerHTML）。
  *
  * 所以：文字用 XUL label 的 value 或 HTML 的 innerHTML，控件一律 HTML。
  */

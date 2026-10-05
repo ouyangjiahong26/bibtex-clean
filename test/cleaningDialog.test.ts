@@ -92,7 +92,7 @@ describe("cleaningDialog", function () {
       ];
       const data = renderDialog(multiChanges, 5, mockGetString);
 
-      // 2 changed items (A1, A2), 5 total → 3 unchanged
+      // 2 个条目有变更（A1、A2），共 5 个条目，即 3 个无需清理
       assert.equal(
         data.summary,
         "dialog-summary-clean-items:total=5,changes=3,unchanged=3",

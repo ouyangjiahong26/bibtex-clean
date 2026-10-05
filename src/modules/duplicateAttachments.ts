@@ -76,7 +76,7 @@ export function toDuplicateAttachment(
       parentKey,
       url,
       dateAdded,
-      // 链接附件不承载批注；numAnnotations() 对它抛错，直接记 0
+      // 链接附件不承载批注。numAnnotations() 对它抛错，直接记 0
       annotationCount: 0,
       snapshot:
         item.attachmentLinkMode === Zotero.Attachments.LINK_MODE_IMPORTED_URL,
@@ -97,7 +97,7 @@ function yieldToUI(): Promise<void> {
 export type CollectProgress = {
   /** 每批让出时与全部结束时回调（已处理数，总数）。 */
   onProgress?: (done: number, total: number) => void;
-  /** 测试注入用；真实运行用 setTimeout。 */
+  /** 测试注入用。真实运行用 setTimeout。 */
   wait?: () => Promise<void>;
 };
 
@@ -106,7 +106,7 @@ export type CollectProgress = {
  *
  * 只看每个父条目自己的直接附件：重复是合并重复条目留下的同父条目现象，
  * 不同父条目下的同名附件不算。getAttachments() 默认不含回收站中的项。
- * 选中的附件、笔记等非普通条目跳过——单独一个附件无从重复。
+ * 选中的附件、笔记等非普通条目跳过（单独一个附件无从重复）。
  *
  * 异步分批执行并定期让出主线程，选中大量条目时界面保持响应、进度可报。
  */

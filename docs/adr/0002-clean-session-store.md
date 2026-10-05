@@ -1,4 +1,4 @@
-# 0002 — CleanSessionStore 提取撤销状态
+# 0002 CleanSessionStore 提取撤销状态
 
 ## 状态
 

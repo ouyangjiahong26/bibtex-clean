@@ -31,9 +31,7 @@ export function createLocale(): Locale {
   };
 }
 
-/**
- * Initialize locale data
- */
+/** 初始化 locale 数据。 */
 function initLocale() {
   const l10n = new (
     typeof Localization === "undefined"
@@ -54,10 +52,10 @@ interface Pattern {
 }
 
 /**
- * Get locale string, see https://firefox-source-docs.mozilla.org/l10n/fluent/tutorial.html#fluent-translation-list-ftl
- * @param localeString ftl key
- * @param options.branch branch name
- * @param options.args args
+ * 读取 locale 字符串，见 https://firefox-source-docs.mozilla.org/l10n/fluent/tutorial.html#fluent-translation-list-ftl
+ * @param localeString ftl 键名
+ * @param options.branch 分支名
+ * @param options.args 传给 Fluent 的参数
  * @example
  * ```ftl
  * # addon.ftl

@@ -103,7 +103,7 @@ function createHarness(options: {
 }
 
 describe("filterDeleteSelectedItems", function () {
-  it("tells the user when nothing is selectable, without opening a dialog", async function () {
+  it("没有可删项时提示用户，不打开对话框", async function () {
     const harness = createHarness({ candidates: [] });
 
     await filterDeleteSelectedItems(harness.adapters, locale);
@@ -113,7 +113,7 @@ describe("filterDeleteSelectedItems", function () {
     assert.deepEqual(harness.deletedBatches, []);
   });
 
-  it("deletes nothing when the user cancels", async function () {
+  it("用户取消时不删除", async function () {
     const harness = createHarness({ candidates: [snapshot, note] });
 
     await filterDeleteSelectedItems(harness.adapters, locale);
@@ -124,7 +124,7 @@ describe("filterDeleteSelectedItems", function () {
     assert.deepEqual(harness.notifier.infos, []);
   });
 
-  it("deletes nothing when the user confirms an empty selection", async function () {
+  it("用户确认空选择时不删除", async function () {
     const harness = createHarness({ candidates: [snapshot, note], chosen: [] });
 
     await filterDeleteSelectedItems(harness.adapters, locale);
@@ -133,7 +133,7 @@ describe("filterDeleteSelectedItems", function () {
     assert.deepEqual(harness.notifier.successes, []);
   });
 
-  it("passes the whole candidate set to the dialog", async function () {
+  it("把全部候选传给对话框", async function () {
     const all = [snapshot, plainLink, note];
     const harness = createHarness({ candidates: all, chosen: [note] });
 
@@ -143,7 +143,7 @@ describe("filterDeleteSelectedItems", function () {
     assert.deepEqual(harness.deletedBatches[0], [note]);
   });
 
-  it("reports the deleted count and note count", async function () {
+  it("报告删除数与笔记数", async function () {
     const harness = createHarness({
       candidates: [plainLink, note],
       chosen: [plainLink, note],
@@ -160,7 +160,7 @@ describe("filterDeleteSelectedItems", function () {
     assert.deepEqual(harness.notifier.errors, []);
   });
 
-  it("omits the note count when no note was deleted", async function () {
+  it("没有删除笔记时省略笔记数", async function () {
     const harness = createHarness({
       candidates: [plainLink],
       chosen: [plainLink],
@@ -173,7 +173,7 @@ describe("filterDeleteSelectedItems", function () {
     ]);
   });
 
-  it("explains that snapshot files stay on disk", async function () {
+  it("说明快照文件仍留在磁盘上", async function () {
     const harness = createHarness({
       candidates: [snapshot],
       chosen: [snapshot],
@@ -187,7 +187,7 @@ describe("filterDeleteSelectedItems", function () {
     );
   });
 
-  it("reports failures and the partial success separately", async function () {
+  it("分别报告失败与部分成功", async function () {
     const failed = { candidate: note, error: new Error("save failed") };
     const harness = createHarness({
       candidates: [snapshot, note],
@@ -206,7 +206,7 @@ describe("filterDeleteSelectedItems", function () {
     ]);
   });
 
-  it("reports only the failures when nothing was deleted", async function () {
+  it("一无所删时只报告失败", async function () {
     const failed = { candidate: note, error: new Error("save failed") };
     const harness = createHarness({
       candidates: [note],

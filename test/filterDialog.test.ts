@@ -69,7 +69,7 @@ function attr(props: TagElementProps, name: string): unknown {
 
 describe("filterDialog", function () {
   describe("renderFilterDialog", function () {
-    it("offers both kinds and both match modes, with 'all' selected", function () {
+    it("提供两种类型与两种匹配模式，默认选中 all", function () {
       const data = view(initialState());
 
       assert.deepEqual(data.kinds, [
@@ -86,7 +86,7 @@ describe("filterDialog", function () {
       ]);
     });
 
-    it("lists the field scopes and operators of a condition row", function () {
+    it("列出条件行的字段范围与运算符", function () {
       const data = view(initialState());
 
       assert.deepEqual(
@@ -99,7 +99,7 @@ describe("filterDialog", function () {
       );
     });
 
-    it("renders every candidate as an unchecked row with its own and parent title", function () {
+    it("把每个候选渲染为未勾选的行，显示自身标题与父条目标题", function () {
       const data = view(initialState());
 
       assert.deepEqual(data.rows, [
@@ -121,7 +121,7 @@ describe("filterDialog", function () {
       assert.equal(data.checkedCount, 0);
     });
 
-    it("counts checked items and notes in the summary and confirm label", function () {
+    it("在摘要与确认文案里统计勾选项数与笔记数", function () {
       const data = view(setAllChecked(initialState(), candidates, true));
 
       assert.equal(
@@ -134,7 +134,7 @@ describe("filterDialog", function () {
       );
     });
 
-    it("drops the note count from the confirm label when no note is checked", function () {
+    it("没有勾选笔记时确认文案不带笔记数", function () {
       const linksOnly = toggleKind(initialState(), "note");
       const state = setAllChecked(linksOnly, candidates, true);
 
@@ -144,7 +144,7 @@ describe("filterDialog", function () {
       );
     });
 
-    it("keeps visible rows unselected after a negated condition, but still lists them", function () {
+    it("否定条件后可见行保持未勾选，但仍列出这些行", function () {
       const state = withCondition(initialState(), 0, {
         field: "title",
         operator: "notContains",
@@ -162,7 +162,7 @@ describe("filterDialog", function () {
       );
     });
 
-    it("carries the empty state when no candidate matches", function () {
+    it("没有候选匹配时给出空状态数据", function () {
       const state = withCondition(initialState(), 0, {
         field: "title",
         value: "不存在的关键词",
@@ -174,7 +174,7 @@ describe("filterDialog", function () {
       assert.equal(data.emptyText, "dialog-filter-empty");
     });
 
-    it("exposes the raw condition rows for the condition area", function () {
+    it("为条件区暴露原始条件行", function () {
       const state = withCondition(initialState(), 0, {
         field: "url",
         operator: "notContains",
@@ -188,7 +188,7 @@ describe("filterDialog", function () {
   });
 
   describe("buildCandidateRowItems", function () {
-    it("renders a checkbox, badge, title and parent title per row", function () {
+    it("每行渲染复选框、徽章、标题与父条目标题", function () {
       const all = setAllChecked(initialState(), candidates, true);
       const items = buildCandidateRowItems(view(all));
 
@@ -218,7 +218,7 @@ describe("filterDialog", function () {
       );
     });
 
-    it("leaves unchecked rows unchecked", function () {
+    it("未勾选的行保持未勾选", function () {
       const state = withCondition(initialState(), 0, {
         field: "title",
         operator: "notContains",
@@ -233,7 +233,7 @@ describe("filterDialog", function () {
       assert.isFalse(checkbox!.properties?.checked);
     });
 
-    it("shows the empty state instead of rows", function () {
+    it("显示空状态而不是候选行", function () {
       const state = withCondition(initialState(), 0, {
         field: "title",
         value: "不存在的关键词",
@@ -245,7 +245,7 @@ describe("filterDialog", function () {
       assert.equal(attr(items[0], "value"), "dialog-filter-empty");
     });
 
-    it("keeps candidate text verbatim (no HTML escaping needed for attributes)", function () {
+    it("候选文字原样保留（属性不需要 HTML 转义）", function () {
       const nasty: Candidate = {
         itemKey: "ATT9",
         libraryID: 1,
@@ -272,7 +272,7 @@ describe("filterDialog", function () {
   });
 
   describe("buildConditionRowItems", function () {
-    it("builds two selects, a text input and a remove button per row", function () {
+    it("每行构建两个下拉框、一个文本输入框和一个移除按钮", function () {
       const state = withCondition(initialState(), 0, {
         field: "note",
         operator: "notContains",
@@ -340,7 +340,7 @@ describe("filterDialog", function () {
   });
 
   describe("buildFilterDialogContent", function () {
-    it("wires the interactive containers and controls", function () {
+    it("连接可交互容器与控件", function () {
       const content = buildFilterDialogContent(view(initialState()));
       const nodes = flatten(content);
 
@@ -398,7 +398,7 @@ describe("filterDialog", function () {
       assert.isNotEmpty(kindsText, "文字用 XUL label 渲染");
     });
 
-    it("shows the checked summary and empty state text", function () {
+    it("显示勾选摘要与空状态文案", function () {
       const state = withCondition(initialState(), 0, {
         field: "title",
         value: "不存在的关键词",
@@ -421,7 +421,7 @@ describe("filterDialog", function () {
       assert.isDefined(empty);
     });
 
-    it("marks the clicking targets with the data-* attributes the wiring reads", function () {
+    it("为点击目标标记连接逻辑读取的 data-* 属性", function () {
       const content = buildFilterDialogContent(view(initialState()));
       const nodes = flatten(content);
 
@@ -441,7 +441,7 @@ describe("filterDialog", function () {
       }
     });
 
-    it("keeps the candidate list container reusable for repainting", function () {
+    it("候选列表容器可复用以重绘", function () {
       const data = view(initialState());
 
       assert.equal(
@@ -456,7 +456,7 @@ describe("filterDialog", function () {
       );
     });
 
-    it("gives every element an explicit namespace, and controls use HTML", function () {
+    it("每个元素都有显式 namespace，控件用 HTML", function () {
       const data = view(initialState());
       const nodes = [
         ...flatten(buildFilterDialogContent(data)),

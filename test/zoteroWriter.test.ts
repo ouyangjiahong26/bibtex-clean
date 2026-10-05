@@ -16,8 +16,8 @@ import { computeChanges, type FieldChange } from "../src/modules/changes";
 };
 
 describe("zoteroWriter", function () {
-  describe("applyAuthorChange", function () {
-    it("replaces all authors and puts them before non-author creators", function () {
+  describe("applyAuthorChange 写入作者", function () {
+    it("替换全部作者并排在非作者创作者之前", function () {
       const creators: _ZoteroTypes.Item.CreatorJSON[] = [
         { creatorType: "author", firstName: "John", lastName: "Smith" },
         { creatorType: "editor", firstName: "Jane", lastName: "Doe" },
@@ -32,7 +32,7 @@ describe("zoteroWriter", function () {
       ]);
     });
 
-    it("splits a combined single-field author into separate creators", function () {
+    it("把合并的单字段作者拆成多个创作者", function () {
       const creators: _ZoteroTypes.Item.CreatorJSON[] = [
         { creatorType: "author", name: "Zhang San; Li Si; Wang Wu; Zhao Liu" },
       ];
@@ -46,7 +46,7 @@ describe("zoteroWriter", function () {
       ]);
     });
 
-    it("keeps the inventor creator type in patent items", function () {
+    it("专利条目保留 inventor 创作者类型", function () {
       const creators: _ZoteroTypes.Item.CreatorJSON[] = [
         { creatorType: "inventor", firstName: "John", lastName: "Smith" },
         { creatorType: "inventor", firstName: "Jane", lastName: "Doe" },
@@ -60,7 +60,7 @@ describe("zoteroWriter", function () {
     });
   });
 
-  describe("applyChanges", function () {
+  describe("applyChanges 写入变更", function () {
     let originalGetAsync: typeof Zotero.Items.getByLibraryAndKeyAsync;
 
     beforeEach(function () {
@@ -71,7 +71,7 @@ describe("zoteroWriter", function () {
       Zotero.Items.getByLibraryAndKeyAsync = originalGetAsync;
     });
 
-    it("keeps successful changes when other items fail", async function () {
+    it("其他条目失败时保留已成功的变更", async function () {
       const goodItem = createMockSavableItem({ key: "A1", issue: "3" });
       const badItem = createMockSavableItem({
         key: "A2",
@@ -116,7 +116,7 @@ describe("zoteroWriter", function () {
       assert.match(failed[0].error.message, /save failed/);
     });
 
-    it("batches multiple changes on the same item into a single save", async function () {
+    it("同一条目的多个变更合并为一次保存", async function () {
       const item = createMockSavableItem({
         key: "A1",
         issue: "第三期",
@@ -151,7 +151,7 @@ describe("zoteroWriter", function () {
       assert.equal(item.saveTxCount(), 1);
     });
 
-    it("processes multiple independent items in parallel", async function () {
+    it("并行处理多个独立条目", async function () {
       const item1 = createMockSavableItem({ key: "A1", issue: "第一期" });
       const item2 = createMockSavableItem({ key: "A2", issue: "第二期" });
       const item3 = createMockSavableItem({ key: "A3", issue: "第三期" });
@@ -199,7 +199,7 @@ describe("zoteroWriter", function () {
       assert.equal(item3.getField("issue"), "3");
     });
 
-    it("handles more than 20 items across batch boundaries", async function () {
+    it("处理跨批次边界的 20 多个条目", async function () {
       const itemCount = 21;
       const items = Array.from({ length: itemCount }, (_, i) =>
         createMockSavableItem({ key: `A${i}`, issue: `第${i}期` }),
@@ -232,7 +232,7 @@ describe("zoteroWriter", function () {
     });
   });
 
-  describe("undoChanges", function () {
+  describe("undoChanges 撤销变更", function () {
     let originalGetAsync: typeof Zotero.Items.getByLibraryAndKeyAsync;
 
     beforeEach(function () {
@@ -243,7 +243,7 @@ describe("zoteroWriter", function () {
       Zotero.Items.getByLibraryAndKeyAsync = originalGetAsync;
     });
 
-    it("restores old field values", async function () {
+    it("恢复字段旧值", async function () {
       const item = createMockSavableItem({ key: "A1", issue: "3" });
 
       Zotero.Items.getByLibraryAndKeyAsync = async (
@@ -271,7 +271,7 @@ describe("zoteroWriter", function () {
       assert.equal(item.getField("issue"), "第三期");
     });
 
-    it("restores author creators from the old formatted value", async function () {
+    it("按旧格式化值恢复作者创作者", async function () {
       const item = createMockSavableItem({
         key: "A1",
         creators: [
@@ -308,7 +308,7 @@ describe("zoteroWriter", function () {
       ]);
     });
 
-    it("keeps successful undos when other items fail", async function () {
+    it("其他条目失败时保留已成功的撤销", async function () {
       const goodItem = createMockSavableItem({ key: "A1", issue: "3" });
       const badItem = createMockSavableItem({
         key: "A2",
@@ -353,8 +353,8 @@ describe("zoteroWriter", function () {
     });
   });
 
-  describe("formatAuthors", function () {
-    it("joins clean multi-author items with ' and ' so they never need cleaning", function () {
+  describe("formatAuthors 格式化作者", function () {
+    it("用 ' and ' 连接干净的多作者条目，无需再清理", function () {
       const authors = formatAuthors([
         { creatorType: "author", firstName: "John", lastName: "Smith" },
         { creatorType: "author", firstName: "Jane", lastName: "Doe" },
@@ -362,7 +362,7 @@ describe("zoteroWriter", function () {
       assert.equal(authors, "Smith, John and Doe, Jane");
     });
 
-    it("keeps semicolons only when a creator itself contains one", function () {
+    it("仅当创作者自身包含分号时才保留分号", function () {
       const authors = formatAuthors([
         { creatorType: "author", name: "Zhang San; Li Si" },
         { creatorType: "author", firstName: "Jane", lastName: "Doe" },
@@ -370,7 +370,7 @@ describe("zoteroWriter", function () {
       assert.equal(authors, "Zhang San; Li Si; Doe, Jane");
     });
 
-    it("ignores non-author creators", function () {
+    it("忽略非作者创作者", function () {
       const authors = formatAuthors([
         { creatorType: "author", firstName: "John", lastName: "Smith" },
         { creatorType: "editor", firstName: "Jane", lastName: "Doe" },
@@ -378,7 +378,7 @@ describe("zoteroWriter", function () {
       assert.equal(authors, "Smith, John");
     });
 
-    it("includes inventor creators for patents", function () {
+    it("专利包含 inventor 创作者", function () {
       const authors = formatAuthors([
         { creatorType: "inventor", firstName: "John", lastName: "Smith" },
         { creatorType: "inventor", firstName: "Jane", lastName: "Doe" },
@@ -386,7 +386,7 @@ describe("zoteroWriter", function () {
       assert.equal(authors, "Smith, John and Doe, Jane");
     });
 
-    it("omits comma when firstName is empty", function () {
+    it("firstName 为空时省略逗号", function () {
       const authors = formatAuthors([
         { creatorType: "author", firstName: "霙婧", lastName: "钱" },
         { creatorType: "author", firstName: "", lastName: "乔鹏昊" },
@@ -394,7 +394,7 @@ describe("zoteroWriter", function () {
       assert.equal(authors, "钱, 霙婧 and 乔鹏昊");
     });
 
-    it("returns undefined when there are no authors", function () {
+    it("没有作者时返回 undefined", function () {
       assert.isUndefined(
         formatAuthors([
           { creatorType: "editor", firstName: "Jane", lastName: "Doe" },
@@ -402,7 +402,7 @@ describe("zoteroWriter", function () {
       );
     });
 
-    it("feeds computeChanges a clean string that produces no author change", function () {
+    it("传给 computeChanges 的干净字符串不产生作者变更", function () {
       const authors = formatAuthors([
         { creatorType: "author", firstName: "John", lastName: "Smith" },
         { creatorType: "author", firstName: "Jane", lastName: "Doe" },
@@ -421,8 +421,8 @@ describe("zoteroWriter", function () {
     });
   });
 
-  describe("parseAuthors", function () {
-    it("splits authors by ' and ' and parses last, first format", function () {
+  describe("parseAuthors 解析作者", function () {
+    it("按 ' and ' 拆分作者并解析“姓, 名”格式", function () {
       const authors = parseAuthors("Smith, John and Doe, Jane");
       assert.deepEqual(authors, [
         { creatorType: "author", lastName: "Smith", firstName: "John" },
@@ -430,14 +430,14 @@ describe("zoteroWriter", function () {
       ]);
     });
 
-    it("falls back to single-field name when there is no comma", function () {
+    it("无逗号时回退为单字段名称", function () {
       const authors = parseAuthors("ACME Corporation");
       assert.deepEqual(authors, [
         { creatorType: "author", name: "ACME Corporation" },
       ]);
     });
 
-    it("filters out empty segments caused by consecutive separators", function () {
+    it("过滤连续分隔符产生的空段", function () {
       const authors = parseAuthors("闻国光 and  and 过仕宁");
       assert.deepEqual(authors, [
         { creatorType: "author", name: "闻国光" },
@@ -445,7 +445,7 @@ describe("zoteroWriter", function () {
       ]);
     });
 
-    it("filters out leading/trailing whitespace-only segments", function () {
+    it("过滤首尾空白段", function () {
       const authors = parseAuthors("  Smith, John   and     Doe, Jane  ");
       assert.deepEqual(authors, [
         { creatorType: "author", lastName: "Smith", firstName: "John" },
@@ -453,7 +453,7 @@ describe("zoteroWriter", function () {
       ]);
     });
 
-    it("uses the given creator type for every parsed creator", function () {
+    it("为每个解析出的创作者使用给定类型", function () {
       const authors = parseAuthors("Smith, John and ACME Corp", "inventor");
       assert.deepEqual(authors, [
         { creatorType: "inventor", lastName: "Smith", firstName: "John" },

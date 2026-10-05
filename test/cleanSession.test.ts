@@ -121,21 +121,21 @@ function asZoteroItems(items: CleanableItem[]): Zotero.Item[] {
 }
 
 describe("cleanSession", function () {
-  describe("CleanWorkflow state machine (isolated)", function () {
+  describe("CleanWorkflow 状态机（隔离测试）", function () {
     const fakeLocale = { getString: (key: string) => `MOCK[${key}]` };
 
-    it("starts in Idle state", function () {
+    it("初始状态为 Idle", function () {
       const workflow = CleanWorkflow.fromIdle();
       assert.equal(workflow.state.kind, "Idle");
     });
 
-    it("Idle -> ItemsSelected when items are selected", function () {
+    it("选择条目后从 Idle 进入 ItemsSelected", function () {
       const items = asZoteroItems([createCleanable("A1", "Paper One")]);
       const workflow = CleanWorkflow.fromIdle().selectItems(items);
       assert.equal(workflow.state.kind, "ItemsSelected");
     });
 
-    it("ItemsSelected -> ChangesComputed when there are cleanable items and changes", function () {
+    it("有可清理条目且有变更时从 ItemsSelected 进入 ChangesComputed", function () {
       const { adapters } = createFakeAdapters();
       const items = asZoteroItems([
         createCleanable("A1", "Paper One", "Smith, John; Doe, Jane"),
@@ -150,7 +150,7 @@ describe("cleanSession", function () {
       assert.lengthOf((workflow.state as any).changes, 1);
     });
 
-    it("ItemsSelected -> NoCleanableItems when nothing can be cleaned", function () {
+    it("无可清理条目时从 ItemsSelected 进入 NoCleanableItems", function () {
       const { adapters } = createFakeAdapters();
       const workflow = CleanWorkflow.fromIdle()
         .selectItems([])
@@ -159,7 +159,7 @@ describe("cleanSession", function () {
       assert.equal(workflow.state.kind, "NoCleanableItems");
     });
 
-    it("ItemsSelected -> NoChanges when cleanable items produce no changes", function () {
+    it("可清理条目不产生变更时从 ItemsSelected 进入 NoChanges", function () {
       const { adapters } = createFakeAdapters();
       const items = asZoteroItems([
         createCleanable("A1", "Paper One", "Smith, John and Doe, Jane"),
@@ -172,7 +172,7 @@ describe("cleanSession", function () {
       assert.equal(workflow.state.kind, "NoChanges");
     });
 
-    it("ChangesComputed -> Confirmed when user confirms", async function () {
+    it("用户确认后从 ChangesComputed 进入 Confirmed", async function () {
       const { adapters, dialogCalls } = createFakeAdapters();
       const items = asZoteroItems([
         createCleanable("A1", "Paper One", "Smith, John; Doe, Jane"),
@@ -187,7 +187,7 @@ describe("cleanSession", function () {
       assert.lengthOf(dialogCalls, 1);
     });
 
-    it("ChangesComputed -> Cancelled when user cancels", async function () {
+    it("用户取消后从 ChangesComputed 进入 Cancelled", async function () {
       const { adapters, setDialogResult } = createFakeAdapters();
       setDialogResult(false);
       const items = asZoteroItems([
@@ -202,7 +202,7 @@ describe("cleanSession", function () {
       assert.equal(cancelled.state.kind, "Cancelled");
     });
 
-    it("Confirmed -> Applied after writing changes", async function () {
+    it("写入变更后从 Confirmed 进入 Applied", async function () {
       const { adapters, writerCalls } = createFakeAdapters();
       const items = asZoteroItems([
         createCleanable("A1", "Paper One", "Smith, John; Doe, Jane"),
@@ -219,7 +219,7 @@ describe("cleanSession", function () {
       assert.equal(writerCalls[0].type, "apply");
     });
 
-    it("Applied -> Notified records store and shows undoable success on full success", async function () {
+    it("全部成功时从 Applied 进入 Notified，记录存储并显示可撤销的成功提示", async function () {
       const { adapters, notifierCalls } = createFakeAdapters();
       const store = new CleanSessionStore();
       const items = asZoteroItems([
@@ -250,7 +250,7 @@ describe("cleanSession", function () {
       assert.isDefined(successCall);
     });
 
-    it("Applied -> Notified shows info on partial failure", function () {
+    it("部分失败时从 Applied 进入 Notified 并显示信息提示", function () {
       const { adapters, notifierCalls } = createFakeAdapters();
       const store = new CleanSessionStore();
       const changes: Change[] = [
@@ -306,7 +306,7 @@ describe("cleanSession", function () {
       assert.isDefined(errorCall);
     });
 
-    it("Applied -> Notified does not record store when all changes fail", function () {
+    it("全部变更失败时从 Applied 进入 Notified 且不记录存储", function () {
       const { adapters, notifierCalls } = createFakeAdapters();
       const store = new CleanSessionStore();
       const changes: Change[] = [
@@ -352,7 +352,7 @@ describe("cleanSession", function () {
       assert.isDefined(errorCall);
     });
 
-    it("throws on invalid state transitions", async function () {
+    it("非法状态转移时抛出异常", async function () {
       const { adapters } = createFakeAdapters();
       const items = asZoteroItems([
         createCleanable("A1", "Paper One", "Smith, John; Doe, Jane"),
@@ -391,11 +391,11 @@ describe("cleanSession", function () {
       } catch {
         rejected = true;
       }
-      assert.isTrue(rejected, "confirm from Idle should reject");
+      assert.isTrue(rejected, "从 Idle 调用 confirm 应被拒绝");
     });
   });
 
-  describe("cleanSession (click chain from right-click menu)", function () {
+  describe("cleanSession（右键菜单触发的点击链路）", function () {
     let originalGetActiveZoteroPane: typeof Zotero.getActiveZoteroPane;
     let mockSelectedItems: any[] = [];
 
@@ -414,7 +414,7 @@ describe("cleanSession", function () {
       Zotero.getActiveZoteroPane = originalGetActiveZoteroPane;
     });
 
-    it("clean click: selected item is loaded, dialog shown, field written, store records", async function () {
+    it("点击清理：加载选中条目、显示对话框、写入字段、记录存储", async function () {
       const fakes = createFakeAdapters();
       mockSelectedItems = [
         {
@@ -438,7 +438,7 @@ describe("cleanSession", function () {
       assert.isDefined(successCall);
     });
 
-    it("clean click + cancel: dialog opens, no field is written, store stays empty", async function () {
+    it("点击清理后取消：打开对话框、不写入字段、存储保持为空", async function () {
       const fakes = createFakeAdapters();
       fakes.setDialogResult(false);
       mockSelectedItems = [
@@ -461,7 +461,7 @@ describe("cleanSession", function () {
       );
     });
 
-    it("clean click with no selection: dialog never opens, notifier shows info", async function () {
+    it("无选中条目时点击清理：不打开对话框、notifier 显示信息提示", async function () {
       const fakes = createFakeAdapters();
       mockSelectedItems = [];
       const store = new CleanSessionStore();
@@ -475,7 +475,7 @@ describe("cleanSession", function () {
       assert.isDefined(infoCall);
     });
 
-    it("clean click with no changes: dialog never opens, notifier shows info", async function () {
+    it("无变更时点击清理：不打开对话框、notifier 显示信息提示", async function () {
       const fakes = createFakeAdapters();
       mockSelectedItems = [
         {
@@ -495,7 +495,7 @@ describe("cleanSession", function () {
       assert.isDefined(infoCall);
     });
 
-    it("undo click after a recorded clean: writer undoes and store is consumed", async function () {
+    it("记录清理后点击撤销：writer 执行撤销、存储被清空", async function () {
       const fakes = createFakeAdapters();
       const changes: Change[] = [
         {

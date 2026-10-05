@@ -32,7 +32,7 @@ const changes: Change[] = [
 
 describe("cleaningDialog", function () {
   describe("renderDialog", function () {
-    it("returns structured data with summary, columns, and rows", function () {
+    it("返回含摘要、列、行的结构化数据", function () {
       const data = renderDialog(changes, 3, mockGetString);
 
       assert.equal(
@@ -53,7 +53,7 @@ describe("cleaningDialog", function () {
       });
     });
 
-    it("returns empty rows when changes is empty", function () {
+    it("changes 为空时返回空行列表", function () {
       const data = renderDialog([], 5, mockGetString);
 
       assert.equal(
@@ -63,7 +63,7 @@ describe("cleaningDialog", function () {
       assert.lengthOf(data.rows, 0);
     });
 
-    it("computes unchanged count correctly for multiple items", function () {
+    it("多个条目时正确计算未变更数量", function () {
       const multiChanges: Change[] = [
         {
           itemLibraryID: 1,
@@ -100,7 +100,7 @@ describe("cleaningDialog", function () {
       assert.lengthOf(data.rows, 3);
     });
 
-    it("returns only display-relevant fields in rows (no itemKey)", function () {
+    it("行中只返回展示相关字段（不含 itemKey）", function () {
       const data = renderDialog(changes, 1, mockGetString);
       const row = data.rows[0];
 
@@ -112,7 +112,7 @@ describe("cleaningDialog", function () {
       ]);
     });
 
-    it("snapshot: matches expected structure", function () {
+    it("快照：符合预期结构", function () {
       const multiChanges: Change[] = [
         {
           itemLibraryID: 1,
@@ -160,7 +160,7 @@ describe("cleaningDialog", function () {
   });
 
   describe("renderDialogHtml", function () {
-    it("produces HTML containing all row data", function () {
+    it("生成的 HTML 包含全部行数据", function () {
       const data: DialogData = {
         summary: "2 changes in 3 items",
         columns: ["Item", "Field", "Change"],
@@ -185,7 +185,7 @@ describe("cleaningDialog", function () {
       assert.include(html, "Change");
     });
 
-    it("escapes HTML special characters in data", function () {
+    it("转义数据中的 HTML 特殊字符", function () {
       const data: DialogData = {
         summary: "<script>alert('xss')</script>",
         columns: ["A", "B", "C"],
@@ -209,7 +209,7 @@ describe("cleaningDialog", function () {
       assert.include(html, "&#39;single&#39;");
     });
 
-    it("includes style block and table structure", function () {
+    it("包含样式块和表格结构", function () {
       const data: DialogData = {
         summary: "test",
         columns: ["A", "B", "C"],
@@ -224,7 +224,7 @@ describe("cleaningDialog", function () {
       assert.include(html, "<tbody>");
     });
 
-    it("renders multiple rows", function () {
+    it("渲染多行", function () {
       const data: DialogData = {
         summary: "test",
         columns: ["A", "B", "C"],
@@ -251,27 +251,27 @@ describe("cleaningDialog", function () {
   });
 
   describe("escapeHtml", function () {
-    it("escapes ampersand", function () {
+    it("转义 & 字符", function () {
       assert.equal(escapeHtml("a&b"), "a&amp;b");
     });
 
-    it("escapes angle brackets", function () {
+    it("转义尖括号", function () {
       assert.equal(escapeHtml("<div>"), "&lt;div&gt;");
     });
 
-    it("escapes double quotes", function () {
+    it("转义双引号", function () {
       assert.equal(escapeHtml('"hello"'), "&quot;hello&quot;");
     });
 
-    it("escapes single quotes", function () {
+    it("转义单引号", function () {
       assert.equal(escapeHtml("it's"), "it&#39;s");
     });
 
-    it("returns plain text unchanged", function () {
+    it("纯文本保持不变", function () {
       assert.equal(escapeHtml("hello world"), "hello world");
     });
 
-    it("handles empty string", function () {
+    it("处理空字符串", function () {
       assert.equal(escapeHtml(""), "");
     });
   });

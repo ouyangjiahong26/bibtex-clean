@@ -4,13 +4,13 @@ import { config } from "../package.json";
 
 const basicTool = new BasicTool();
 
-// @ts-expect-error - Plugin instance is not typed
+// @ts-expect-error 插件实例未公开类型
 if (!basicTool.getGlobal("Zotero")[config.addonInstance]) {
   _globalThis.addon = new Addon();
   defineGlobal("ztoolkit", () => {
     return _globalThis.addon.data.ztoolkit;
   });
-  // @ts-expect-error - Plugin instance is not typed
+  // @ts-expect-error 插件实例未公开类型
   Zotero[config.addonInstance] = addon;
 }
 

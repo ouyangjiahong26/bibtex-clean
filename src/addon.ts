@@ -13,9 +13,9 @@ class Addon {
       current: any;
     };
   };
-  // Lifecycle hooks
+  // 生命周期钩子
   public hooks: typeof hooks;
-  // APIs
+  // 对外 API
   public api: object;
 
   constructor() {

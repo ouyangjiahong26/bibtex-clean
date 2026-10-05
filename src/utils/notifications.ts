@@ -73,7 +73,7 @@ export function createNotifier(
     // 内部挂载撤销链接的点击事件，调用方无需知道 ProgressWindow 的内部 DOM 结构。
     setTimeout(() => {
       try {
-        // @ts-expect-error — ProgressWindow.win 内部 _window 属性未公开类型
+        // @ts-expect-error ProgressWindow.win 的内部 _window 属性未公开类型
         const win = progressWindow.win?._window as Window | undefined;
         if (!win) return;
         const link = win.document.getElementById(linkId);

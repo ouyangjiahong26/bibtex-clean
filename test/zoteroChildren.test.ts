@@ -126,8 +126,8 @@ describe("zoteroChildren", function () {
     runtimeGlobals.Zotero = originalZotero;
   });
 
-  describe("isLinkAttachment", function () {
-    it("accepts snapshots and web links", function () {
+  describe("isLinkAttachment 判定", function () {
+    it("接受网页快照与网页链接", function () {
       const snapshot = createMockItem({
         key: "A1",
         kind: "attachment",
@@ -144,7 +144,7 @@ describe("zoteroChildren", function () {
       assert.isTrue(isLinkAttachment(webLink));
     });
 
-    it("rejects file attachments, notes and regular items", function () {
+    it("拒绝文件附件、笔记、普通条目", function () {
       const importedFile = createMockItem({
         key: "A3",
         kind: "attachment",
@@ -164,7 +164,7 @@ describe("zoteroChildren", function () {
       assert.isFalse(isLinkAttachment(regular));
     });
 
-    it("rejects stored documents saved with a source URL, such as full-text PDFs", function () {
+    it("拒绝带来源网址的存储文档（如全文 PDF）", function () {
       // 抓取器把带来源网址的下载文件存成 imported_url，contentType 是 PDF 等
       const fullTextPdf = createMockItem({
         key: "A5",
@@ -178,8 +178,8 @@ describe("zoteroChildren", function () {
     });
   });
 
-  describe("toCandidate", function () {
-    it("turns a snapshot into a candidate flagged as snapshot", function () {
+  describe("toCandidate 转换", function () {
+    it("把网页快照转成标记为快照的候选", function () {
       const item = createMockItem({
         key: "A1",
         kind: "attachment",
@@ -202,7 +202,7 @@ describe("zoteroChildren", function () {
       });
     });
 
-    it("marks a web link as not a snapshot and falls back to the URL as title", function () {
+    it("把网页链接标记为非快照，标题回退为 URL", function () {
       const item = createMockItem({
         key: "A2",
         kind: "attachment",
@@ -217,7 +217,7 @@ describe("zoteroChildren", function () {
       assert.isUndefined(candidate?.path);
     });
 
-    it("turns a note into a candidate with its body text", function () {
+    it("把笔记连同正文转成候选", function () {
       const item = createMockItem({
         key: "N1",
         kind: "note",
@@ -235,7 +235,7 @@ describe("zoteroChildren", function () {
       });
     });
 
-    it("falls back to the first non-empty note line when the title is empty", function () {
+    it("标题为空时回退到笔记首个非空行", function () {
       const item = createMockItem({
         key: "N2",
         kind: "note",
@@ -245,7 +245,7 @@ describe("zoteroChildren", function () {
       assert.equal(toCandidate(item, "")?.title, "扫描版需要复核");
     });
 
-    it("returns undefined for non-candidates", function () {
+    it("对非候选返回 undefined", function () {
       assert.isUndefined(
         toCandidate(createMockItem({ key: "R1", kind: "regular" }), ""),
       );
@@ -261,7 +261,7 @@ describe("zoteroChildren", function () {
       );
     });
 
-    it("returns undefined for a full-text PDF saved with a source URL", function () {
+    it("对带来源网址的全文 PDF 返回 undefined", function () {
       const fullTextPdf = createMockItem({
         key: "A5",
         kind: "attachment",
@@ -275,8 +275,8 @@ describe("zoteroChildren", function () {
     });
   });
 
-  describe("collectCandidates", function () {
-    it("collects direct child attachments and notes of a selected item", function () {
+  describe("collectCandidates 收集", function () {
+    it("收集所选条目的直接子附件与直接子笔记", function () {
       const snapshot = registerItem(
         2,
         createMockItem({
@@ -320,7 +320,7 @@ describe("zoteroChildren", function () {
       assert.equal(note.key, "N1");
     });
 
-    it("excludes full-text PDFs saved with a source URL, keeping snapshots and notes", function () {
+    it("排除带来源网址的全文 PDF，保留快照与笔记", function () {
       registerItem(
         2,
         createMockItem({
@@ -361,7 +361,7 @@ describe("zoteroChildren", function () {
       );
     });
 
-    it("never includes the selected parent item itself", function () {
+    it("绝不包含所选父条目本身", function () {
       const parent = createMockItem({
         key: "R1",
         kind: "regular",
@@ -373,7 +373,7 @@ describe("zoteroChildren", function () {
       assert.deepEqual(collectCandidates([parent]), []);
     });
 
-    it("takes a directly selected attachment or note as the candidate", function () {
+    it("把直接选中的附件或笔记作为候选", function () {
       const parent = registerItem(
         1,
         createMockItem({ key: "R1", kind: "regular", title: "论文一" }),
@@ -396,7 +396,7 @@ describe("zoteroChildren", function () {
       assert.equal(parent.key, "R1");
     });
 
-    it("leaves the parent title empty for a standalone attachment", function () {
+    it("独立附件的父标题留空", function () {
       const attachment = registerItem(
         6,
         createMockItem({
@@ -421,7 +421,7 @@ describe("zoteroChildren", function () {
       ]);
     });
 
-    it("does not list the same child twice when its parent is selected too", function () {
+    it("父条目同时被选中时不重复列出同一子条目", function () {
       registerItem(
         7,
         createMockItem({
@@ -447,17 +447,17 @@ describe("zoteroChildren", function () {
     });
   });
 
-  describe("deleteConcurrency", function () {
-    it("defaults to the built-in value when the pref is unset", function () {
+  describe("deleteConcurrency 偏好值", function () {
+    it("偏好未设置时用内置默认值", function () {
       assert.equal(deleteConcurrency(), 4);
     });
 
-    it("defaults when the pref is not a number", function () {
+    it("偏好不是数字时用默认值", function () {
       prefValue = "many";
       assert.equal(deleteConcurrency(), 4);
     });
 
-    it("clamps the pref into [1, 20]", function () {
+    it("把偏好值限制在 [1, 20] 区间", function () {
       prefValue = 0;
       assert.equal(deleteConcurrency(), 1);
       prefValue = -5;
@@ -469,7 +469,7 @@ describe("zoteroChildren", function () {
     });
   });
 
-  describe("moveCandidatesToTrash", function () {
+  describe("moveCandidatesToTrash 移入回收站", function () {
     function registerNotes(
       keys: string[],
       saveHook?: () => void | Promise<void>,
@@ -501,7 +501,7 @@ describe("zoteroChildren", function () {
       }
     }
 
-    it("deletes up to the configured number of items in parallel", async function () {
+    it("最多同时删除配置数量的条目", async function () {
       prefValue = 2;
       const keys = ["A1", "A2", "A3", "A4"];
       const releases: Array<() => void> = [];
@@ -538,7 +538,7 @@ describe("zoteroChildren", function () {
       assert.deepEqual(result.failed, []);
     });
 
-    it("deletes one at a time when the pref is 1", async function () {
+    it("偏好为 1 时逐个删除", async function () {
       prefValue = 1;
       const keys = ["A1", "A2", "A3"];
       const releases: Array<() => void> = [];
@@ -567,7 +567,7 @@ describe("zoteroChildren", function () {
       );
     });
 
-    it("keeps the batch going when one item in it fails", async function () {
+    it("批次中一项失败时继续处理批次", async function () {
       prefValue = 2;
       registerItem(1, createMockItem({ key: "A1", kind: "note" }));
       registerItem(
@@ -595,7 +595,7 @@ describe("zoteroChildren", function () {
       assert.match(result.failed[0].error.message, /save failed/);
     });
 
-    it("marks every candidate as deleted and saves it", async function () {
+    it("把每个候选标记为删除并保存", async function () {
       const item = registerItem(1, createMockItem({ key: "A1", kind: "note" }));
 
       const result = await moveCandidatesToTrash([candidateOf("A1")]);
@@ -605,7 +605,7 @@ describe("zoteroChildren", function () {
       assert.deepEqual(result.failed, []);
     });
 
-    it("keeps going when one item fails to save", async function () {
+    it("一项保存失败时继续处理", async function () {
       registerItem(1, createMockItem({ key: "A1", kind: "note" }));
       registerItem(
         2,
@@ -630,7 +630,7 @@ describe("zoteroChildren", function () {
       assert.match(result.failed[0].error.message, /save failed/);
     });
 
-    it("reports a missing item as a failure without touching the others", async function () {
+    it("把缺失条目报告为失败，不影响其余条目", async function () {
       registerItem(1, createMockItem({ key: "A1", kind: "note" }));
 
       const result = await moveCandidatesToTrash([
@@ -645,7 +645,7 @@ describe("zoteroChildren", function () {
       assert.match(result.failed[0].error.message, /未找到条目 GONE/);
     });
 
-    it("matches the item by library as well as key", async function () {
+    it("按库和键共同匹配条目", async function () {
       registerItem(
         1,
         createMockItem({ key: "A1", kind: "note", libraryID: 2 }),

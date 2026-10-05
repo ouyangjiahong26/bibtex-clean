@@ -152,7 +152,7 @@ async function onMainWindowUnload(_win: Window): Promise<void> {
 function onShutdown(): void {
   ztoolkit.unregisterAll();
   addon.data.alive = false;
-  // @ts-expect-error - Plugin instance is not typed
+  // @ts-expect-error 插件实例未公开类型
   delete Zotero[addon.data.config.addonInstance];
 }
 

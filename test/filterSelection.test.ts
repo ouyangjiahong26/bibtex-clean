@@ -36,7 +36,7 @@ const candidates: Candidate[] = [snapshot, note];
 
 describe("filterSelection", function () {
   describe("initialState", function () {
-    it("starts with both kinds, 'all' matching and a single empty condition", function () {
+    it("初始状态含两种类型、all 匹配模式与一行空条件", function () {
       const state = initialState();
 
       assert.deepEqual(state.filter.kinds, ["link-attachment", "note"]);
@@ -46,13 +46,13 @@ describe("filterSelection", function () {
       ]);
     });
 
-    it("checks nothing before any filtering", function () {
+    it("筛选前不勾选任何行", function () {
       assert.deepEqual(initialState().checkedKeys, []);
     });
   });
 
-  describe("withFilter-driven transitions", function () {
-    it("clears checked rows when a kind is toggled", function () {
+  describe("withFilter 驱动的状态迁移", function () {
+    it("切换类型时清空勾选", function () {
       const manual = toggleChecked(initialState(), candidateKey(note));
 
       const filtered = toggleKind(manual, "note");
@@ -61,7 +61,7 @@ describe("filterSelection", function () {
       assert.deepEqual(filtered.checkedKeys, []);
     });
 
-    it("leaves nothing checked when no kind is selected", function () {
+    it("没有选中任何类型时不保留勾选", function () {
       const state = toggleKind(initialState(), "note");
       const bothOff = toggleKind(state, "link-attachment");
 
@@ -69,7 +69,7 @@ describe("filterSelection", function () {
       assert.deepEqual(bothOff.checkedKeys, []);
     });
 
-    it("clears checked rows when a second condition is added", function () {
+    it("新增第二个条件时清空勾选", function () {
       const titled = withCondition(initialState(), 0, {
         field: "title",
         value: "超星",
@@ -85,7 +85,7 @@ describe("filterSelection", function () {
       assert.deepEqual(both.checkedKeys, []);
     });
 
-    it("switching to 'any' clears the checked rows", function () {
+    it("切到 any 模式时清空勾选", function () {
       const titled = withCondition(initialState(), 0, {
         field: "title",
         value: "超星",
@@ -102,7 +102,7 @@ describe("filterSelection", function () {
       assert.deepEqual(anyMode.checkedKeys, []);
     });
 
-    it("clears manual selections as soon as a negated condition is active", function () {
+    it("否定条件一生效就清空手动勾选", function () {
       // 旧版含否定条件时默认不勾选的特例已取消：现在条件变化一律清空勾选
       const checked = toggleChecked(initialState(), candidateKey(snapshot));
 
@@ -116,8 +116,8 @@ describe("filterSelection", function () {
     });
   });
 
-  describe("condition rows", function () {
-    it("adds a new empty row without changing visibility", function () {
+  describe("条件行", function () {
+    it("新增一行空条件，不改变可见性", function () {
       const state = addCondition(initialState());
 
       assert.lengthOf(state.filter.conditions, 2);
@@ -129,14 +129,14 @@ describe("filterSelection", function () {
       assert.deepEqual(state.checkedKeys, []);
     });
 
-    it("keeps at least one row when the last one is removed", function () {
+    it("删除最后一行时仍保留至少一行", function () {
       const state = removeCondition(initialState(), 0);
 
       assert.lengthOf(state.filter.conditions, 1);
       assert.equal(state.filter.conditions[0].value, "");
     });
 
-    it("removes the addressed row", function () {
+    it("删除指定行", function () {
       const two = addCondition(initialState());
       const addressed = withCondition(two, 0, { value: "超星" });
 
@@ -146,7 +146,7 @@ describe("filterSelection", function () {
       assert.equal(state.filter.conditions[0].value, "超星");
     });
 
-    it("ignores an out-of-range index", function () {
+    it("忽略越界的下标", function () {
       const state = initialState();
       assert.deepEqual(
         removeCondition(state, 5).filter.conditions,
@@ -158,7 +158,7 @@ describe("filterSelection", function () {
       );
     });
 
-    it("keeps manual selections when the same value is applied again", function () {
+    it("再次应用相同的值时保留手动勾选", function () {
       // 焦点进出下拉框会用同一个值再走一遍 withCondition；
       // 条件没变就不该清空勾选，否则用户手改的勾选会被冲掉。
       const checked = toggleChecked(initialState(), candidateKey(snapshot));
@@ -168,7 +168,7 @@ describe("filterSelection", function () {
       assert.deepEqual(same.checkedKeys, [candidateKey(snapshot)]);
     });
 
-    it("clears checked rows when the value actually changes", function () {
+    it("值真正变化时清空勾选", function () {
       const checked = toggleChecked(initialState(), candidateKey(note));
 
       const changed = withCondition(checked, 0, { value: "超星" });
@@ -177,8 +177,8 @@ describe("filterSelection", function () {
     });
   });
 
-  describe("manual selection", function () {
-    it("toggles a single row without re-filtering", function () {
+  describe("手动勾选", function () {
+    it("切换单行勾选，不重新筛选", function () {
       const checked = toggleChecked(initialState(), candidateKey(snapshot));
       assert.deepEqual(checked.checkedKeys, [candidateKey(snapshot)]);
 
@@ -186,7 +186,7 @@ describe("filterSelection", function () {
       assert.deepEqual(unchecked.checkedKeys, []);
     });
 
-    it("checks and unchecks every visible row", function () {
+    it("全选与取消全选所有可见行", function () {
       const base = toggleKind(initialState(), "note");
 
       const none = setAllChecked(base, candidates, false);
@@ -196,7 +196,7 @@ describe("filterSelection", function () {
       assert.deepEqual(all.checkedKeys, [candidateKey(snapshot)]);
     });
 
-    it("reports only checked rows that are visible under the current filter", function () {
+    it("只报告当前筛选下仍可见的勾选行", function () {
       // checkedKeys 里可能留着已不可见行的 key；
       // checkedCandidates 只回当前可见的勾选行
       const state: FilterDialogState = {

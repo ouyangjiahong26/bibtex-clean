@@ -31,8 +31,8 @@ export type CandidateFilter = {
 /**
  * 一次筛选删除中可能被删除的子条目。
  *
- * `parentTitle` 只用于列表中区分候选从哪条题录来，不参与条件匹配——
- * 字段范围里没有父条目标题这一项。
+ * `parentTitle` 只用于列表中区分候选从哪条题录来，不参与条件匹配
+ * （字段范围里没有父条目标题这一项）。
  */
 export type Candidate = {
   itemKey: string;
@@ -83,7 +83,7 @@ const candidateValues: Record<
 
 /**
  * 单个条件行是否命中候选项。
- * 子串包含、大小写不敏感；候选项没有该字段时，`包含` 不命中，`不包含` 命中。
+ * 子串包含、大小写不敏感。候选项没有该字段时，`包含` 不命中，`不包含` 命中。
  */
 export function matchesCondition(
   candidate: Candidate,

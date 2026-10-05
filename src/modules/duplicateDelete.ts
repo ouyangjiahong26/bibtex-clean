@@ -1,5 +1,5 @@
 /**
- * 清理重复附件编排：收集重复组 → 对话框勾选 → 移入回收站 → 通知。
+ * 清理重复附件编排：收集重复组、对话框勾选、移入回收站、通知。
  *
  * 与筛选删除（filterDelete）并列的第三条流程，同样不做插件内撤销，
  * 恢复入口是 Zotero 回收站。判定标准见
@@ -34,7 +34,7 @@ export interface DuplicateCollectAdapter {
 
 /** 重复附件对话框适配器。真实实现使用 ztoolkit.Dialog。 */
 export interface DuplicateDialogAdapter {
-  /** 返回用户勾选并确认要删除的附件；取消时返回 undefined。 */
+  /** 返回用户勾选并确认要删除的附件。取消时返回 undefined。 */
   choose(groups: DuplicateGroup[]): Promise<DuplicateAttachment[] | undefined>;
 }
 

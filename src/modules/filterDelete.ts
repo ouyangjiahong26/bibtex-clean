@@ -1,5 +1,5 @@
 /**
- * 筛选删除编排：候选收集 → 对话框勾选 → 移入回收站 → 通知。
+ * 筛选删除编排：候选收集、对话框勾选、移入回收站、通知。
  *
  * 与清理流程（cleanSession）并列的第二条流程：清理规范化字段值并可撤销，
  * 筛选删除移除子条目且无插件内撤销，恢复入口是 Zotero 回收站。
@@ -24,7 +24,7 @@ export interface CandidateAdapter {
 
 /** 筛选对话框适配器。真实实现使用 ztoolkit.Dialog。 */
 export interface FilterDialogAdapter {
-  /** 返回用户勾选并确认的候选项；取消时返回 undefined。 */
+  /** 返回用户勾选并确认的候选项。取消时返回 undefined。 */
   choose(candidates: Candidate[]): Promise<Candidate[] | undefined>;
 }
 
@@ -53,7 +53,7 @@ export type FilterDeleteAdapters = {
 /**
  * 筛选删除当前选中的条目下的子条目。
  *
- * 无候选时不弹空对话框，告知用户即可；筛选后无命中的情况由对话框内的空状态
+ * 无候选时不弹空对话框，告知用户即可。筛选后无命中的情况由对话框内的空状态
  * 呈现，因为用户此时正在改条件。
  */
 export async function filterDeleteSelectedItems(

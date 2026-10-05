@@ -2,9 +2,9 @@
  * 条目清理确认对话框。
  *
  * 三层结构：
- * 1. renderDialog — 纯数据，可快照测试
- * 2. renderDialogHtml — 消费结构化数据，拼装 HTML
- * 3. openCleaningConfirmationDialog — toolkit 对话框 + waitForClose seam
+ * 1. renderDialog：纯数据，可快照测试
+ * 2. renderDialogHtml：消费结构化数据，拼装 HTML
+ * 3. openCleaningConfirmationDialog：toolkit 对话框 + waitForClose seam
  */
 
 import type { Change } from "./changes";
@@ -64,7 +64,7 @@ export function renderDialog(
       getStringFn("dialog-column-change"),
     ],
     rows: changes.map((change) => {
-      // 规则里的字段都有对应文案；万一出现新字段，退回显示字段 id
+      // 规则里的字段都有对应文案。万一出现新字段，退回显示字段 id
       const fieldKey = FIELD_NAME_KEYS[change.field];
       return {
         itemTitle: change.itemTitle,

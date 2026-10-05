@@ -31,7 +31,7 @@ type DuplicateDialogDataObject = {
 /**
  * 打开清理重复附件对话框，返回用户勾选并确认要删除的附件。
  *
- * @returns 确认时的勾选集；取消或关闭窗口时返回 undefined
+ * @returns 确认时的勾选集。取消或关闭窗口时返回 undefined
  */
 export async function openDuplicateDeleteDialog(
   groups: DuplicateGroup[],

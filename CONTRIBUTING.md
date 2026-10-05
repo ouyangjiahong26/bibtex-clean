@@ -28,7 +28,7 @@ ZOTERO_PLUGIN_PROFILE_PATH=/path/to/profile
 
 提交前至少跑通 `npm run lint:check` 和 `npm run build`。改动运行期行为时，在本地跑 `npm test`，并在 PR 里说明结果。
 
-## 提交与 PR 规范
+## 提交与 PR 标准
 
 - 提交信息用 Conventional Commits，描述用中文，例如：
 
@@ -53,17 +53,17 @@ CI 不跑 `npm test`：`zotero-plugin test` 需要图形界面，在无头 runne
 
 ### 适用范围
 
-issue、PR、评论的内容由 AI 生成，或经 AI 辅助生成，都适用本节。AI 辅助指 AI 产出了你无法逐行确认的文本；只用于查文档、改错别字的不算。
+issue、PR、评论的内容由 AI 生成，或经 AI 辅助生成，都适用本节。AI 辅助指 AI 产出了你无法逐行确认的文本。只用于查文档、改错别字的不算。
 
 ### 标记方式
 
-**issue 与 PR 的标题最开头必须是 `[AI Generated] `**，并打上 `ai-generated` 标签：
+issue 与 PR 的标题最开头必须是 `[AI Generated] `，并打上 `ai-generated` 标签：
 
 ```
 [AI Generated] fix(zoteroWriter): 过滤作者解析中的空段
 ```
 
-**AI 生成的评论，正文第一个非空行必须是 AI 标记行**：
+AI 生成的评论，正文第一个非空行必须是 AI 标记行：
 
 ```
 > [AI Generated] 本评论由 AI 生成
@@ -73,7 +73,7 @@ issue、PR、评论的内容由 AI 生成，或经 AI 辅助生成，都适用�
 
 ### 责任与审查
 
-- 标记只声明来源，AI 不承担责任。提交者——人或 agent 的运营者——对内容负责：能复现、能解释、能应答 review。
+- 标记只声明来源，AI 不承担责任。提交者（人或 agent 的运营者）对内容负责：能复现、能解释、能应答 review。
 - 维护者按普通 PR 审查 AI 产出的 PR，且必须自己跑通验证步骤，不以 AI 的自我声明替代验证。
 - 未声明的内容一旦被发现，维护者可以要求补标记，或直接关闭 issue / PR。
 

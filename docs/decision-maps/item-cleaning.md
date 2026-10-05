@@ -2,9 +2,9 @@
 
 ## Notes
 
-- **Domain**: BibTeX Clean Zotero 插件，从"导出清理后的 BibTeX"扩展为"直接清理 Zotero 条目字段"。
-- **Consult**: `CONTEXT.md`, `docs/adr/0001-clean-items-in-place.md`
-- **Standing preferences**: 破坏性写操作必须可预览、可撤销；用户可见术语统一为"清理"。
+- Domain: BibTeX Clean Zotero 插件，从"导出清理后的 BibTeX"扩展为"直接清理 Zotero 条目字段"。
+- Consult: `CONTEXT.md`, `docs/adr/0001-clean-items-in-place.md`
+- Standing preferences: 破坏性写操作必须可预览、可撤销。用户可见术语统一为“清理”。
 
 ## clean-direction: 是否直接修改 Zotero 条目字段？
 
@@ -58,7 +58,7 @@ Type: Grilling
 
 - 先对目标条目做模拟运行（dry run），计算所有变更。
 - 对话框只展示会发生变更的条目。
-- 每行展示：条目标题、字段名、原值 → 新值。
+- 每行展示：条目标题、字段名、原值与新值。
 - 顶部摘要：总数、变更数、无需清理数，以及"此操作可撤销最近一次"。
 - 按钮：`确认清理`、`取消`。
 - 执行策略为部分成功：成功条目保留修改，失败条目单独报错。
@@ -77,7 +77,7 @@ Type: Grilling
 
 - 在内存中保留最近一次清理操作的原始字段值。
 - 撤销入口两处：右键菜单"撤销上次清理"、成功通知弹窗中的"撤销"按钮。
-- 撤销范围：仅当前 Zotero 会话有效；只能撤销最近一次完整的批量清理操作。
+- 撤销范围：仅当前 Zotero 会话有效。只能撤销最近一次完整的批量清理操作。
 - 新的清理操作会覆盖旧的撤销记录。
 
 ## dialog-implementation: 确认对话框用什么技术实现？
@@ -90,21 +90,21 @@ Type: Prototype
 
 确认对话框应该使用 Zotero 原生 XUL 对话框、HTML 弹窗，还是 ztoolkit 提供的辅助方法？需要考虑：
 
-- 展示多行变更列表（条目标题、字段、原值→新值）的可读性。
+- 展示多行变更列表（条目标题、字段、原值与新值）的可读性。
 - 中英文 locale 的渲染。
 - 与 Zotero 主题/样式的协调性。
 - 实现和维护成本。
 
 ### Answer
 
-使用 **ztoolkit DialogHelper + 自定义 HTML 内容**。
+使用 ztoolkit DialogHelper + 自定义 HTML 内容。
 
 - DialogHelper 已经封装了 `openDialog`、窗口生命周期、按钮回调和 `data-l10n-id` 国际化机制，与项目现有依赖一致。
 - 不采用 DialogHelper 的网格布局，而是在单个 cell 中放置一个 HTML `div`，内部用 HTML table 渲染变更列表，以获得足够的布局灵活性。
 - 不采用原生 XUL dialog：开发和维护成本更高，布局能力弱于 HTML。
-- 不采用 VirtualizedTable：变更数量通常有限，普通 HTML table 足够；引入虚拟化表格反而增加复杂度。
+- 不采用 VirtualizedTable：变更数量通常有限，普通 HTML table 足够。引入虚拟化表格反而增加复杂度。
 
-布局采用 **表格布局（Variant A）**。信息密度最高，条目、字段、原值→新值一目了然，适合在有限对话框空间内展示批量变更。
+布局采用表格布局（Variant A）。信息密度最高，条目、字段、原值与新值一目了然，适合在有限对话框空间内展示批量变更。
 
 原型文件：`prototype/confirmation-dialog.html`（可直接在浏览器中打开预览三种变体）。
 
@@ -130,29 +130,29 @@ Type: Research
 
 ### Answer
 
-**核心 seam 是一个纯函数 `computeChanges(items)`，输入输出完全基于普通 JavaScript 对象，不依赖 Zotero 运行时。**
+核心 seam 是一个纯函数 `computeChanges(items)`，输入输出完全基于普通 JavaScript 对象，不依赖 Zotero 运行时。
 
 #### 测试基础设施现状
 
 - 测试框架：Mocha + Chai（`package.json` 已声明依赖）。
-- 运行方式：`npm test` → `zotero-plugin test`，会启动一个真实的 Zotero 实例并在其中执行 `test/` 下的测试文件。
+- 运行方式：`npm test` 会执行 `zotero-plugin test`，启动一个真实的 Zotero 实例并在其中运行 `test/` 下的测试文件。
 - 现有测试：`test/startup.test.ts` 是一个集成测试，验证 `Zotero[config.addonInstance]` 已定义。
 
 #### 推荐 seams
 
 把清理逻辑拆到一个新的 `itemCleaning` 模块，只暴露纯函数接口。UI 层负责把 Zotero item 转换为普通对象后传入，核心逻辑完全不接触 `Zotero` 全局或 ztoolkit。
 
-**Seam 1：单字段规则 `applyRule(field, value)`**
+Seam 1：单字段规则 `applyRule(field, value)`
 
 ```ts
 function applyRule(field: string, value: string): string | undefined;
 ```
 
 - 输入：字段名、字段原值。
-- 输出：如果规则触发了变更，返回新值；否则返回 `undefined`。
+- 输出：如果规则触发了变更，返回新值。否则返回 `undefined`。
 - 测试覆盖：author 分号替换、number 移除"第/期"、未触发规则返回 undefined。
 
-**Seam 2：批量变更计算 `computeChanges(items)`**
+Seam 2：批量变更计算 `computeChanges(items)`
 
 ```ts
 type CleanableItem = {
@@ -226,13 +226,13 @@ Type: Research
 目标：用 ztoolkit DialogHelper + HTML table 实现批量确认对话框。
 
 1. 新建 `src/modules/cleaningDialog.ts`，导出：
-   - `openCleaningConfirmationDialog(changes: Change[]): Promise<boolean>`：返回用户是否点击「确认清理」。
+   - `openCleaningConfirmationDialog(changes: Change[]): Promise<boolean>`：返回用户是否点击“确认清理”。
 2. 对话框实现要点：
    - 使用 `new ztoolkit.Dialog(1, 1)`，在唯一 cell 中放置 HTML `div`（`namespace: "html"`，`tag: "div"`）。
    - 通过 `dialogData.l10nFiles` 加载 FTL 文件，支持 `data-l10n-id` 国际化。
-   - 通过 `dialogData._lastButtonId` 判断用户点击了「确认清理」还是「取消」。
+   - 通过 `dialogData._lastButtonId` 判断用户点击了“确认清理”还是“取消”。
    - 对话框主体用 HTML table 动态渲染变更列表，过长时启用垂直滚动。
-   - 顶部摘要显示：总数、变更数、无需清理数，以及「此操作可撤销最近一次」。
+   - 顶部摘要显示：总数、变更数、无需清理数，以及“此操作可撤销最近一次”。
 3. 新增 locale 条目到 `addon/locale/en-US/addon.ftl` 和 `addon/locale/zh-CN/addon.ftl`：
    - `dialog-title-clean-items`、`dialog-summary-clean-items`、`dialog-button-confirm-clean`、`dialog-button-cancel`。
    - `dialog-column-item`、`dialog-column-field`、`dialog-column-change`。
@@ -253,14 +253,14 @@ Type: Research
    - 将保存的原始字段值写回对应条目。
    - 清理 `lastCleanOperation`，避免重复撤销。
 4. 修改 `src/hooks.ts`：
-   - 将右键菜单项从「复制清理后的 BibTeX」改为「清理条目」。
-   - 新增「撤销上次清理」菜单项（仅在 `lastCleanOperation` 存在时启用）。
-   - 菜单点击流程：获取选中条目 → `toCleanableItem` → `computeChanges` → 若为空则提示无需清理 → 打开确认对话框 → 用户确认后 `applyChanges` → 保存原始值到 `lastCleanOperation` → 显示成功通知（含撤销按钮）。
-5. 成功通知使用 `ztoolkit.ProgressWindow`，并在其中添加「撤销」按钮回调。
+   - 将右键菜单项从“复制清理后的 BibTeX”改为“清理条目”。
+   - 新增“撤销上次清理”菜单项（仅在 `lastCleanOperation` 存在时启用）。
+   - 菜单点击流程：获取选中条目并用 `toCleanableItem` 转换，再用 `computeChanges` 计算变更。结果为空则提示无需清理。否则打开确认对话框，用户确认后用 `applyChanges` 写入，把原始值保存到 `lastCleanOperation`，显示含撤销按钮的成功通知。
+5. 成功通知使用 `ztoolkit.ProgressWindow`，并在其中添加“撤销”按钮回调。
 
 #### 阶段 4：移除旧功能与清理
 
-目标：删除已废弃的「复制清理后的 BibTeX」相关 dead code。
+目标：删除已废弃的“复制清理后的 BibTeX”相关 dead code。
 
 1. 删除 `src/modules/bibtexClean.ts` 和 `src/modules/bibtexExport.ts`。
 2. 从 `src/hooks.ts` 中移除对 `copyCleanBibTeXToClipboard` 的引用。
@@ -322,16 +322,16 @@ lastCleanOperation?: {
 - [ ] `npm test` 通过，包括新的 `test/itemCleaning.test.ts`。
 - [ ] `npm run build` 通过，TypeScript 无错误。
 - [ ] `npm run lint:check` 通过。
-- [ ] 在 Zotero 中右键选中条目，能看到「清理条目」菜单项。
+- [ ] 在 Zotero 中右键选中条目，能看到“清理条目”菜单项。
 - [ ] 选中包含可清理字段的条目时，弹出确认对话框并正确展示变更列表。
-- [ ] 点击确认后，条目字段被修改，并显示含「撤销」按钮的成功通知。
+- [ ] 点击确认后，条目字段被修改，并显示含“撤销”按钮的成功通知。
 - [ ] 点击撤销后，字段恢复到清理前的值。
 - [ ] 选中无变更条目时，提示无需清理，不弹出空对话框。
 - [ ] 多选条目时，部分写入失败仅影响失败条目，成功条目保持修改。
 
 #### 风险与注意事项
 
-- `Zotero.Item` 的字段写入是异步操作，需确认 `item.setField` + `item.saveTx()` 的正确用法；建议在写入失败时捕获异常并单独报错。
+- `Zotero.Item` 的字段写入是异步操作，需确认 `item.setField` + `item.saveTx()` 的正确用法。建议在写入失败时捕获异常并单独报错。
 - DialogHelper 的 HTML cell 中无法直接使用 Vue/React 等框架，只能用原生 DOM 操作渲染表格。
-- 撤销仅在当前 Zotero 会话有效，重启后丢失；如需持久化撤销，需要额外设计，但不在本次范围内。
-- 旧功能移除后，若用户依赖「复制清理后的 BibTeX」，需考虑版本升级说明；当前决定是直接替换，不再保留旧入口。
+- 撤销仅在当前 Zotero 会话有效，重启后丢失。如需持久化撤销，需要额外设计，但不在本次范围内。
+- 旧功能移除后，若用户依赖“复制清理后的 BibTeX”，需考虑版本升级说明。当前决定是直接替换，不再保留旧入口。

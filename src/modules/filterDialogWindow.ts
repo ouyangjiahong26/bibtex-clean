@@ -46,7 +46,7 @@ type FilterDialogDataObject = {
 /** menulist 与 textbox 都用 value 承载当前值。 */
 type ValueElement = Element & { value: string };
 
-/** 从事件目标反查所在条件行的序号；找不到时返回 -1，纯函数会忽略它。 */
+/** 从事件目标反查所在条件行的序号。找不到时返回 -1，纯函数会忽略它。 */
 function conditionIndexOf(target: Element): number {
   const index = target.closest(".condition-row")?.getAttribute("data-index");
   return index === null || index === undefined ? -1 : Number(index);
@@ -55,7 +55,7 @@ function conditionIndexOf(target: Element): number {
 /**
  * 打开筛选删除对话框，返回用户勾选并确认的候选项。
  *
- * @returns 确认时的勾选集；取消或关闭窗口时返回 undefined
+ * @returns 确认时的勾选集。取消或关闭窗口时返回 undefined
  */
 export async function openFilterDeleteDialog(
   candidates: Candidate[],

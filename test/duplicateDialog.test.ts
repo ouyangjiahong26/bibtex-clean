@@ -92,7 +92,7 @@ describe("duplicateDialog", function () {
           ["1\x00KEEP", "带批注的副本", "dialog-duplicate-keep-badge", false],
           ["1\x00DROP", "合并带来的副本", undefined, true],
         ],
-        "保留者排最前、不勾选、带保留徽章；其余默认勾选待删",
+        "保留者排最前、不勾选、带保留徽章。其余默认勾选待删",
       );
     });
 

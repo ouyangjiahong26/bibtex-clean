@@ -50,7 +50,7 @@ export const RULES: CleaningRule[] = [
 
 /**
  * 对指定字段应用清理规则。
- * @returns 变更后的新值；无需变更时返回 undefined。
+ * @returns 变更后的新值。无需变更时返回 undefined。
  */
 export function applyRule(field: string, value: string): string | undefined {
   const rule = RULES.find((r) => r.field === field);

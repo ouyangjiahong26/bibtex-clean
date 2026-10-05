@@ -95,7 +95,7 @@ describe("zoteroChildren", function () {
     itemsByID = new Map();
     itemsByKey = new Map();
     prefValue = undefined;
-    // 测试里替换 Zotero 全局；真实形状由 zotero-types 提供，此处只喂被调用的 API
+    // 测试里替换 Zotero 全局。真实形状由 zotero-types 提供，此处只喂被调用的 API
     const runtimeGlobals = globalThis as unknown as Record<string, unknown>;
     originalZotero = runtimeGlobals.Zotero;
     runtimeGlobals.Zotero = {

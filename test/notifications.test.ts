@@ -203,7 +203,7 @@ function isRecognisedProgressType(
   type: string | undefined,
   icon: string | undefined,
 ): boolean {
-  // 显式 icon 优先；否则 type 必须是内置类型（success/fail/default）
+  // 显式 icon 优先。否则 type 必须是内置类型（success/fail/default）
   if (icon) return true;
   return type === "success" || type === "fail" || type === "default";
 }

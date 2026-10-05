@@ -3,16 +3,16 @@ import { registerItemMenu } from "../src/modules/menuRegistration";
 import type { CleanSessionStore } from "../src/modules/cleanSessionStore";
 
 /**
- * Hook-side seam for "右键菜单清理条目失效".
+ * 面向 issue“右键菜单清理条目失效”的 hook 侧接缝测试。
  *
- * No existing test exercises the right-click menu hook path. This suite
- * mocks the global `ztoolkit` so `registerItemMenu` runs in isolation,
- * then asserts the captured `ztoolkit.Menu.register` calls.
+ * 此前没有测试覆盖右键菜单 hook 路径。本测试套件 mock 全局
+ * `ztoolkit`，让 `registerItemMenu` 独立运行，再断言捕获的
+ * `ztoolkit.Menu.register` 调用。
  *
- * With the Locale injection, no `addon` global mock is needed — the fake
- * locale controls the label strings directly.
+ * 由于注入了 Locale，不需要 mock 全局 `addon`，假 locale 直接控制
+ * 标签字符串。
  */
-describe("menuRegistration (right-click menu hook)", function () {
+describe("menuRegistration（右键菜单 hook）", function () {
   type MenuCall = { target: string; options: any };
 
   let menuCalls: MenuCall[];
@@ -57,7 +57,7 @@ describe("menuRegistration (right-click menu hook)", function () {
     return menuCalls.find((c) => c.options && c.options.id === id);
   }
 
-  it("registers four menu items under the 'item' context", function () {
+  it("在 item 上下文注册四个菜单项", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
@@ -69,14 +69,14 @@ describe("menuRegistration (right-click menu hook)", function () {
       () => {},
     );
 
-    assert.lengthOf(menuCalls, 4, "expected exactly four Menu.register calls");
+    assert.lengthOf(menuCalls, 4, "应恰好有四次 Menu.register 调用");
     assert.equal(menuCalls[0].target, "item");
     assert.equal(menuCalls[1].target, "item");
     assert.equal(menuCalls[2].target, "item");
     assert.equal(menuCalls[3].target, "item");
   });
 
-  it("registers 'clean' menu item with the expected id, tag, and label", function () {
+  it("以预期的 id、tag 和 label 注册 clean 菜单项", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
@@ -91,17 +91,17 @@ describe("menuRegistration (right-click menu hook)", function () {
     const cleanItem = callsById("zotero-itemmenu-bibtexclean-clean");
     assert.isDefined(
       cleanItem,
-      "clean menu item with id 'zotero-itemmenu-bibtexclean-clean' must be registered",
+      "应注册 id 为 'zotero-itemmenu-bibtexclean-clean' 的 clean 菜单项",
     );
     assert.equal(cleanItem!.options.tag, "menuitem");
     assert.equal(cleanItem!.options.label, "FAKE[menuitem-clean-items]");
     assert.isFunction(
       cleanItem!.options.commandListener,
-      "clean menu item must expose a commandListener",
+      "clean 菜单项必须提供 commandListener",
     );
   });
 
-  it("registers 'undo' menu item with the expected id, tag, and label", function () {
+  it("以预期的 id、tag 和 label 注册 undo 菜单项", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
@@ -116,17 +116,17 @@ describe("menuRegistration (right-click menu hook)", function () {
     const undoItem = callsById("zotero-itemmenu-bibtexclean-undo");
     assert.isDefined(
       undoItem,
-      "undo menu item with id 'zotero-itemmenu-bibtexclean-undo' must be registered",
+      "应注册 id 为 'zotero-itemmenu-bibtexclean-undo' 的 undo 菜单项",
     );
     assert.equal(undoItem!.options.tag, "menuitem");
     assert.equal(undoItem!.options.label, "FAKE[menuitem-undo-last-clean]");
     assert.isFunction(
       undoItem!.options.commandListener,
-      "undo menu item must expose a commandListener",
+      "undo 菜单项必须提供 commandListener",
     );
   });
 
-  it("registers 'filter delete' menu item with the expected id, tag, and label", function () {
+  it("以预期的 id、tag 和 label 注册 filter delete 菜单项", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
@@ -143,7 +143,7 @@ describe("menuRegistration (right-click menu hook)", function () {
     );
     assert.isDefined(
       filterDeleteItem,
-      "filter delete menu item with id 'zotero-itemmenu-bibtexclean-filter-delete' must be registered",
+      "应注册 id 为 'zotero-itemmenu-bibtexclean-filter-delete' 的 filter delete 菜单项",
     );
     assert.equal(filterDeleteItem!.options.tag, "menuitem");
     assert.equal(
@@ -152,11 +152,11 @@ describe("menuRegistration (right-click menu hook)", function () {
     );
     assert.isFunction(
       filterDeleteItem!.options.commandListener,
-      "filter delete menu item must expose a commandListener",
+      "filter delete 菜单项必须提供 commandListener",
     );
   });
 
-  it("registers 'duplicate delete' menu item with the expected id, tag, and label", function () {
+  it("以预期的 id、tag 和 label 注册 duplicate delete 菜单项", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
@@ -173,7 +173,7 @@ describe("menuRegistration (right-click menu hook)", function () {
     );
     assert.isDefined(
       duplicateDeleteItem,
-      "duplicate delete menu item with id 'zotero-itemmenu-bibtexclean-duplicate-delete' must be registered",
+      "应注册 id 为 'zotero-itemmenu-bibtexclean-duplicate-delete' 的 duplicate delete 菜单项",
     );
     assert.equal(duplicateDeleteItem!.options.tag, "menuitem");
     assert.equal(
@@ -182,11 +182,11 @@ describe("menuRegistration (right-click menu hook)", function () {
     );
     assert.isFunction(
       duplicateDeleteItem!.options.commandListener,
-      "duplicate delete menu item must expose a commandListener",
+      "duplicate delete 菜单项必须提供 commandListener",
     );
   });
 
-  it("'undo' menu item is disabled when store has no undo", function () {
+  it("store 无可撤销操作时 undo 菜单项禁用", function () {
     const mockStore = { hasUndo: () => false } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
@@ -202,15 +202,15 @@ describe("menuRegistration (right-click menu hook)", function () {
     assert.isDefined(undoItem);
     assert.isFunction(
       undoItem!.options.isDisabled,
-      "undo menu item must expose an isDisabled predicate",
+      "undo 菜单项必须提供 isDisabled 谓词",
     );
     assert.isTrue(
       undoItem!.options.isDisabled(),
-      "isDisabled() must return true when store.hasUndo() is false",
+      "store.hasUndo() 为 false 时 isDisabled() 必须返回 true",
     );
   });
 
-  it("'undo' menu item is enabled when store has undo", function () {
+  it("store 有可撤销操作时 undo 菜单项启用", function () {
     const mockStore = { hasUndo: () => true } as unknown as CleanSessionStore;
     const fakeLocale = createFakeLocale();
     registerItemMenu(
@@ -226,11 +226,11 @@ describe("menuRegistration (right-click menu hook)", function () {
     assert.isDefined(undoItem);
     assert.isFalse(
       undoItem!.options.isDisabled(),
-      "isDisabled() must return false when store.hasUndo() is true",
+      "store.hasUndo() 为 true 时 isDisabled() 必须返回 false",
     );
   });
 
-  it("clicking the menu items invokes their callbacks", function () {
+  it("点击菜单项会调用各自的回调", function () {
     let cleanCalled = 0;
     let undoCalled = 0;
     let filterDeleteCalled = 0;
@@ -274,17 +274,9 @@ describe("menuRegistration (right-click menu hook)", function () {
     duplicateDeleteItem!.options.commandListener();
     cleanItem!.options.commandListener();
 
-    assert.equal(cleanCalled, 2, "clean callback should fire on each click");
-    assert.equal(undoCalled, 1, "undo callback should fire on click");
-    assert.equal(
-      filterDeleteCalled,
-      1,
-      "filter delete callback should fire on click",
-    );
-    assert.equal(
-      duplicateDeleteCalled,
-      1,
-      "duplicate delete callback should fire on click",
-    );
+    assert.equal(cleanCalled, 2, "每次点击都会触发 clean 回调");
+    assert.equal(undoCalled, 1, "点击时触发 undo 回调");
+    assert.equal(filterDeleteCalled, 1, "点击时触发 filter delete 回调");
+    assert.equal(duplicateDeleteCalled, 1, "点击时触发 duplicate delete 回调");
   });
 });

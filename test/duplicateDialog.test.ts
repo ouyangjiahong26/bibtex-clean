@@ -72,7 +72,7 @@ function attr(props: TagElementProps, name: string): unknown {
 
 describe("duplicateDialog", function () {
   describe("renderDuplicateDialog", function () {
-    it("renders one group with a header and one row per member", function () {
+    it("渲染带头部信息的组，每个成员一行", function () {
       const data = view(defaultTrashKeys(groups));
 
       assert.equal(data.title, "dialog-title-duplicate-delete");
@@ -96,7 +96,7 @@ describe("duplicateDialog", function () {
       );
     });
 
-    it("shows the annotation count only for annotated members", function () {
+    it("只给有批注的成员显示批注数", function () {
       const data = view(defaultTrashKeys(groups));
 
       assert.equal(
@@ -106,14 +106,14 @@ describe("duplicateDialog", function () {
       assert.isUndefined(data.groups[0].rows[1].annotationLabel);
     });
 
-    it("trims dateAdded to the date part", function () {
+    it("把 dateAdded 截取到日期部分", function () {
       const data = view(defaultTrashKeys(groups));
 
       assert.equal(data.groups[0].rows[0].dateLabel, "2024-06-01");
       assert.equal(data.groups[0].rows[1].dateLabel, "2024-01-01");
     });
 
-    it("counts checked rows in the summary and confirm label", function () {
+    it("在摘要与确认文案里统计勾选行数", function () {
       const data = view(defaultTrashKeys(groups));
 
       assert.equal(
@@ -124,7 +124,7 @@ describe("duplicateDialog", function () {
       assert.equal(data.checkedCount, 1);
     });
 
-    it("reflects manual unchecking in the counts", function () {
+    it("计数反映手动取消勾选", function () {
       const data = view(
         toggleCheckedKey(defaultTrashKeys(groups), "1\x00DROP"),
       );
@@ -135,7 +135,7 @@ describe("duplicateDialog", function () {
   });
 
   describe("元素树", function () {
-    it("builds a checkbox per member carrying its data-key", function () {
+    it("为每个成员构建携带 data-key 的复选框", function () {
       const data = view(defaultTrashKeys(groups));
       const items = buildGroupItems(data);
 
@@ -164,7 +164,7 @@ describe("duplicateDialog", function () {
       assert.equal(checkboxes[0]!.namespace, "html", "控件用 HTML");
     });
 
-    it("renders keep badge, annotations and date as labels", function () {
+    it("把保留徽章、批注与日期渲染为 label", function () {
       const data = view(defaultTrashKeys(groups));
       const memberRow = buildGroupItems(data)[0].children?.find((child) =>
         child.classList?.includes("duplicate-member-row"),
@@ -184,7 +184,7 @@ describe("duplicateDialog", function () {
       );
     });
 
-    it("wires the interactive containers and controls", function () {
+    it("连接可交互容器与控件", function () {
       const content = buildDuplicateDialogContent(
         view(defaultTrashKeys(groups)),
       );
@@ -209,7 +209,7 @@ describe("duplicateDialog", function () {
       );
     });
 
-    it("keeps the group list container reusable for repainting", function () {
+    it("组列表容器可复用以重绘", function () {
       const data = view(defaultTrashKeys(groups));
       const groupList = buildDuplicateDialogContent(data).children?.find(
         (child) => child.id === DUPLICATE_DIALOG_IDS.groupList,
@@ -222,7 +222,7 @@ describe("duplicateDialog", function () {
       );
     });
 
-    it("gives every element an explicit namespace, and controls use HTML", function () {
+    it("每个元素都有显式 namespace，控件用 HTML", function () {
       const data = view(defaultTrashKeys(groups));
       const nodes = [
         ...flatten(buildDuplicateDialogContent(data)),

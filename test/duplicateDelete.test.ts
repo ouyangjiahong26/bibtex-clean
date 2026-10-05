@@ -154,7 +154,7 @@ function createHarness(options: {
 }
 
 describe("duplicateDeleteSelectedItems", function () {
-  it("tells the user when there is no duplicate, without opening a dialog", async function () {
+  it("没有重复项时告知用户，且不打开对话框", async function () {
     const harness = createHarness({ groups: [] });
 
     await duplicateDeleteSelectedItems(harness.adapters, locale);
@@ -164,7 +164,7 @@ describe("duplicateDeleteSelectedItems", function () {
     assert.deepEqual(harness.deletedBatches, []);
   });
 
-  it("deletes nothing when the user cancels", async function () {
+  it("用户取消时不删除任何条目", async function () {
     const harness = createHarness({ groups: [group] });
 
     await duplicateDeleteSelectedItems(harness.adapters, locale);
@@ -175,7 +175,7 @@ describe("duplicateDeleteSelectedItems", function () {
     assert.deepEqual(harness.notifier.infos, []);
   });
 
-  it("deletes nothing when the user confirms an empty selection", async function () {
+  it("用户确认空选择时不删除任何条目", async function () {
     const harness = createHarness({ groups: [group], chosen: [] });
 
     await duplicateDeleteSelectedItems(harness.adapters, locale);
@@ -184,7 +184,7 @@ describe("duplicateDeleteSelectedItems", function () {
     assert.deepEqual(harness.notifier.successes, []);
   });
 
-  it("passes the groups to the dialog and deletes the chosen attachments", async function () {
+  it("把分组传给对话框并删除所选附件", async function () {
     const harness = createHarness({
       groups: [group],
       chosen: [plainDuplicate],
@@ -196,7 +196,7 @@ describe("duplicateDeleteSelectedItems", function () {
     assert.deepEqual(harness.deletedBatches[0], [plainDuplicate]);
   });
 
-  it("reports the deleted count without extra detail for plain duplicates", async function () {
+  it("普通重复附件只报告删除数量，不附加说明", async function () {
     const harness = createHarness({
       groups: [group],
       chosen: [plainDuplicate],
@@ -213,7 +213,7 @@ describe("duplicateDeleteSelectedItems", function () {
     assert.deepEqual(harness.notifier.deleteErrors, []);
   });
 
-  it("warns when the deleted attachments carry annotations", async function () {
+  it("删除的附件带批注时给出提醒", async function () {
     const harness = createHarness({
       groups: [group],
       chosen: [annotated, plainDuplicate],
@@ -229,7 +229,7 @@ describe("duplicateDeleteSelectedItems", function () {
     ]);
   });
 
-  it("warns when the deleted attachments include snapshots", async function () {
+  it("删除的附件包含快照时给出提醒", async function () {
     const harness = createHarness({
       groups: [group],
       chosen: [snapshotDuplicate],
@@ -245,7 +245,7 @@ describe("duplicateDeleteSelectedItems", function () {
     ]);
   });
 
-  it("combines the annotation and snapshot details", async function () {
+  it("合并批注与快照的附加说明", async function () {
     const harness = createHarness({
       groups: [group],
       chosen: [annotated, snapshotDuplicate],
@@ -259,7 +259,7 @@ describe("duplicateDeleteSelectedItems", function () {
     );
   });
 
-  it("reports failures and the partial success separately", async function () {
+  it("分别报告失败与部分成功", async function () {
     const failed = {
       candidate: plainDuplicate,
       error: new Error("save failed"),
@@ -281,7 +281,7 @@ describe("duplicateDeleteSelectedItems", function () {
     ]);
   });
 
-  it("reports only the failures when nothing was deleted", async function () {
+  it("没有删除任何条目时只报告失败", async function () {
     const failed = {
       candidate: plainDuplicate,
       error: new Error("save failed"),
@@ -299,7 +299,7 @@ describe("duplicateDeleteSelectedItems", function () {
     assert.deepEqual(harness.notifier.infos, []);
   });
 
-  it("forwards scan progress to the progress handle and closes it", async function () {
+  it("把扫描进度转发到进度句柄并关闭它", async function () {
     const harness = createHarness({ groups: [group], chosen: [] });
 
     await duplicateDeleteSelectedItems(harness.adapters, locale);
@@ -308,7 +308,7 @@ describe("duplicateDeleteSelectedItems", function () {
     assert.equal(harness.scan.closed, 1);
   });
 
-  it("closes the scan and reports an unexpected failure instead of dying silently", async function () {
+  it("关闭扫描并报告意外失败，而不是静默退出", async function () {
     const harness = createHarness({
       groups: [group],
       collectError: new Error(" Items.get blew up"),

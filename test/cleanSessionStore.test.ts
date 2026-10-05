@@ -9,11 +9,11 @@ describe("CleanSessionStore", function () {
     store = new CleanSessionStore();
   });
 
-  it("hasUndo returns false when no operation is recorded", function () {
+  it("未记录操作时 hasUndo 返回 false", function () {
     assert.isFalse(store.hasUndo());
   });
 
-  it("record stores changes and hasUndo returns true", function () {
+  it("record 记录变更后 hasUndo 返回 true", function () {
     const changes: Change[] = [
       {
         itemLibraryID: 1,
@@ -28,7 +28,7 @@ describe("CleanSessionStore", function () {
     assert.isTrue(store.hasUndo());
   });
 
-  it("current returns the recorded operation without clearing", function () {
+  it("current 返回已记录的操作且不清除", function () {
     const changes: Change[] = [
       {
         itemLibraryID: 1,
@@ -50,7 +50,7 @@ describe("CleanSessionStore", function () {
     assert.isDefined(op2);
   });
 
-  it("consume returns and clears the recorded operation", function () {
+  it("consume 返回并清除已记录的操作", function () {
     const changes: Change[] = [
       {
         itemLibraryID: 1,
@@ -71,7 +71,7 @@ describe("CleanSessionStore", function () {
     assert.isUndefined(store.consume());
   });
 
-  it("record deep-clones changes so external mutation does not affect stored data", function () {
+  it("record 深拷贝变更，外部修改不影响存储数据", function () {
     const changes: Change[] = [
       {
         itemLibraryID: 1,
@@ -91,7 +91,7 @@ describe("CleanSessionStore", function () {
     assert.equal(stored!.changes[0].newValue, "3");
   });
 
-  it("record replaces previous operation", function () {
+  it("record 替换先前的操作", function () {
     const changes1: Change[] = [
       {
         itemLibraryID: 1,

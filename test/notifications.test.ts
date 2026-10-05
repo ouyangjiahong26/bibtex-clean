@@ -71,7 +71,7 @@ describe("createNotifier", function () {
     assert.isFunction(notifier.showUndoableSuccess);
   });
 
-  it("showSuccess 使用 recognised progress type", function () {
+  it("showSuccess 使用受支持的进度类型", function () {
     const notifier = createNotifier(fakeLocale);
     notifier.showSuccess("Done");
     assert.lengthOf(createdWindows, 1);
@@ -80,7 +80,7 @@ describe("createNotifier", function () {
     ]);
   });
 
-  it("showInfo 使用 recognised progress type", function () {
+  it("showInfo 使用受支持的进度类型", function () {
     const notifier = createNotifier(fakeLocale);
     notifier.showInfo("No changes");
     assert.lengthOf(createdWindows, 1);
@@ -88,11 +88,11 @@ describe("createNotifier", function () {
     assert.isDefined(call);
     assert.isTrue(
       isRecognisedProgressType(call.type, call.icon),
-      `type=${call.type} icon=${call.icon} should not fall back to empty icon`,
+      `type=${call.type} icon=${call.icon} 不应回退到空图标`,
     );
   });
 
-  it("showErrorDetails 只使用 recognised progress types", function () {
+  it("showErrorDetails 只使用受支持的进度类型", function () {
     const notifier = createNotifier(fakeLocale);
     const failed = [
       {
@@ -114,12 +114,12 @@ describe("createNotifier", function () {
     for (const call of createdWindows[0].createLineCalls) {
       assert.isTrue(
         isRecognisedProgressType(call.type, call.icon),
-        `type=${call.type} icon=${call.icon} should not fall back to empty icon`,
+        `type=${call.type} icon=${call.icon} 不应回退到空图标`,
       );
     }
   });
 
-  it("showUndoableSuccess 使用 recognised progress type 并传递 undo 描述", function () {
+  it("showUndoableSuccess 使用受支持的进度类型并传递 undo 描述", function () {
     let undoCalled = false;
     const onUndo = () => {
       undoCalled = true;
@@ -139,7 +139,7 @@ describe("createNotifier", function () {
     assert.isDefined(call);
     assert.isTrue(
       isRecognisedProgressType(call.type, call.icon),
-      `type=${call.type} icon=${call.icon} should not fall back to empty icon`,
+      `type=${call.type} icon=${call.icon} 不应回退到空图标`,
     );
 
     // 验证 addDescription 被调用，说明 undo 链接已注入
@@ -173,7 +173,7 @@ describe("createNotifier", function () {
     assert.lengthOf(createdWindows[0].createLineCalls, 1);
   });
 
-  it("showDeleteErrorDetails 逐条列出失败的子条目，且只用 recognised progress type", function () {
+  it("showDeleteErrorDetails 逐条列出失败的子条目，且只用受支持的进度类型", function () {
     const candidate: Candidate = {
       itemKey: "NOTE1",
       libraryID: 1,
@@ -193,7 +193,7 @@ describe("createNotifier", function () {
     for (const call of createdWindows[0].createLineCalls) {
       assert.isTrue(
         isRecognisedProgressType(call.type, call.icon),
-        `type=${call.type} icon=${call.icon} should not fall back to empty icon`,
+        `type=${call.type} icon=${call.icon} 不应回退到空图标`,
       );
     }
   });

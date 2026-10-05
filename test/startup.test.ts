@@ -25,7 +25,7 @@ function getRuntimeZotero(): unknown {
 }
 
 describe("startup", function () {
-  it("should have plugin instance defined", function () {
+  it("插件实例已定义", function () {
     const zotero = getRuntimeZotero() as Record<string, unknown> | undefined;
     assert.isNotEmpty(zotero?.[config.addonInstance]);
   });

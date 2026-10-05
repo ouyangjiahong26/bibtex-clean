@@ -3,7 +3,7 @@ import { computeChanges, type CleanableItem } from "../src/modules/changes";
 
 describe("changes", function () {
   describe("computeChanges", function () {
-    it("returns a single change for one dirty author field", function () {
+    it("单个脏 author 字段返回一条变更", function () {
       const items: CleanableItem[] = [
         {
           libraryID: 1,
@@ -24,7 +24,7 @@ describe("changes", function () {
       });
     });
 
-    it("returns only changes for dirty fields across multiple items", function () {
+    it("多个条目时只返回脏字段的变更", function () {
       const items: CleanableItem[] = [
         {
           libraryID: 1,
@@ -44,7 +44,7 @@ describe("changes", function () {
       assert.equal(changes[0].itemKey, "A1");
     });
 
-    it("returns an empty array when no changes are needed", function () {
+    it("无变更时返回空数组", function () {
       const items: CleanableItem[] = [
         {
           libraryID: 1,
@@ -56,11 +56,11 @@ describe("changes", function () {
       assert.deepEqual(computeChanges(items), []);
     });
 
-    it("returns an empty array for empty input", function () {
+    it("输入为空时返回空数组", function () {
       assert.deepEqual(computeChanges([]), []);
     });
 
-    it("returns changes for multiple items and fields", function () {
+    it("多个条目和字段返回多条变更", function () {
       const items: CleanableItem[] = [
         {
           libraryID: 1,
@@ -97,7 +97,7 @@ describe("changes", function () {
       });
     });
 
-    it("returns a change for a dirty volume field", function () {
+    it("脏 volume 字段返回一条变更", function () {
       const items: CleanableItem[] = [
         {
           libraryID: 1,

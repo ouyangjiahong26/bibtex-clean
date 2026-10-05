@@ -59,7 +59,7 @@ function condition(overrides: Partial<FilterCondition> = {}): FilterCondition {
 
 describe("filterCandidates", function () {
   describe("candidateKey", function () {
-    it("combines libraryID and itemKey so same keys in different libraries differ", function () {
+    it("组合 libraryID 与 itemKey，不同库中的相同 itemKey 也不同", function () {
       assert.equal(candidateKey(snapshot), "1\u0000ATT1");
       assert.notEqual(
         candidateKey({ ...snapshot, libraryID: 3 }),
@@ -69,7 +69,7 @@ describe("filterCandidates", function () {
   });
 
   describe("activeConditions", function () {
-    it("ignores rows whose value is empty or whitespace", function () {
+    it("忽略值为空或全是空白字符的行", function () {
       const conditions = [
         condition({ value: "" }),
         condition({ value: "   " }),
@@ -78,14 +78,14 @@ describe("filterCandidates", function () {
       assert.deepEqual(activeConditions(conditions), [conditions[2]]);
     });
 
-    it("keeps values without trimming them in place", function () {
+    it("保留值且不修剪空白", function () {
       const conditions = [condition({ value: " 超星 " })];
       assert.equal(activeConditions(conditions)[0].value, " 超星 ");
     });
   });
 
   describe("matchesCondition", function () {
-    it("matches title, url, path and note text by scope", function () {
+    it("按字段范围匹配标题、url、path 与笔记正文", function () {
       assert.isTrue(
         matchesCondition(
           snapshot,
@@ -109,7 +109,7 @@ describe("filterCandidates", function () {
       );
     });
 
-    it("does not match a scope the candidate has no data for", function () {
+    it("候选没有对应数据的字段范围不匹配", function () {
       assert.isFalse(
         matchesCondition(note, condition({ field: "url", value: "example" })),
       );
@@ -118,7 +118,7 @@ describe("filterCandidates", function () {
       );
     });
 
-    it("matches 'any field' against every field of the candidate", function () {
+    it("any 字段与候选的所有字段匹配", function () {
       assert.isTrue(
         matchesCondition(note, condition({ field: "any", value: "扫描版" })),
       );
@@ -133,7 +133,7 @@ describe("filterCandidates", function () {
       );
     });
 
-    it("does not match the parent item title (display-only field)", function () {
+    it("不匹配父条目标题（仅用于显示的字段）", function () {
       assert.isFalse(
         matchesCondition(
           linkedUrl,
@@ -142,7 +142,7 @@ describe("filterCandidates", function () {
       );
     });
 
-    it("compares case-insensitively and trims the value", function () {
+    it("比较不区分大小写，并修剪值的空白", function () {
       assert.isTrue(
         matchesCondition(
           linkedUrl,
@@ -151,7 +151,7 @@ describe("filterCandidates", function () {
       );
     });
 
-    it("inverts the result for 'not contains'", function () {
+    it("notContains 时反转结果", function () {
       assert.isFalse(
         matchesCondition(
           snapshot,
@@ -166,7 +166,7 @@ describe("filterCandidates", function () {
       );
     });
 
-    it("treats 'not contains' on missing data as a match", function () {
+    it("数据缺失时 notContains 视为匹配", function () {
       assert.isTrue(
         matchesCondition(
           note,
@@ -181,22 +181,22 @@ describe("filterCandidates", function () {
   });
 
   describe("filterCandidates", function () {
-    it("returns every candidate when only both kinds are selected", function () {
+    it("两种类型都选中时返回全部候选", function () {
       assert.deepEqual(filterCandidates(candidates, filter()), candidates);
     });
 
-    it("keeps only the selected kinds", function () {
+    it("只保留选中的类型", function () {
       assert.deepEqual(
         filterCandidates(candidates, filter({ kinds: ["note"] })),
         [note],
       );
     });
 
-    it("returns nothing when no kind is selected", function () {
+    it("没有选中任何类型时返回空", function () {
       assert.deepEqual(filterCandidates(candidates, filter({ kinds: [] })), []);
     });
 
-    it("requires every condition in 'all' mode", function () {
+    it("all 模式下要求满足每个条件", function () {
       const conditions = [
         condition({ field: "any", value: "chaoxing" }),
         condition({ field: "title", value: "超星" }),
@@ -206,7 +206,7 @@ describe("filterCandidates", function () {
       ]);
     });
 
-    it("requires one condition in 'any' mode", function () {
+    it("any 模式下只需满足一个条件", function () {
       const conditions = [
         condition({ field: "title", value: "超星" }),
         condition({ field: "note", value: "扫描版" }),
@@ -217,7 +217,7 @@ describe("filterCandidates", function () {
       );
     });
 
-    it("ignores empty condition rows instead of matching everything", function () {
+    it("忽略值为空的条件行，而不是匹配所有内容", function () {
       const withEmptyRow = filter({ conditions: [condition({ value: "" })] });
       assert.deepEqual(
         filterCandidates(candidates, withEmptyRow),
@@ -234,7 +234,7 @@ describe("filterCandidates", function () {
       );
     });
 
-    it("excludes matches of a negated condition", function () {
+    it("排除命中否定条件的候选", function () {
       const conditions = [
         condition({
           field: "any",

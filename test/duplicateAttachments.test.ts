@@ -92,8 +92,8 @@ describe("duplicateAttachments", function () {
     runtimeGlobals.Zotero = originalZotero;
   });
 
-  describe("toDuplicateAttachment", function () {
-    it("reads imported and linked file attachments with filename and annotations", function () {
+  describe("toDuplicateAttachment 转换", function () {
+    it("读取导入与链接文件附件的文件名和批注数", function () {
       const imported = toDuplicateAttachment(
         createMockItem({
           key: "F1",
@@ -145,7 +145,7 @@ describe("duplicateAttachments", function () {
       );
     });
 
-    it("reads link attachments with URL and snapshot flag", function () {
+    it("读取链接附件的 URL 与快照标记", function () {
       // Zotero 的 numAnnotations() 对非文件附件抛错：链接附件路径绝不能碰它
       const snapshot = toDuplicateAttachment(
         createMockItem({
@@ -194,7 +194,7 @@ describe("duplicateAttachments", function () {
       );
     });
 
-    it("treats stored full-text PDFs saved with a source URL as file attachments", function () {
+    it("把带来源网址存储的全文 PDF 当作文件附件", function () {
       // 抓取器保存的 PDF 全文是 imported_url 但非网页快照：按文件附件判重，
       // numAnnotations() 生效
       const fullTextPdf = toDuplicateAttachment(
@@ -215,7 +215,7 @@ describe("duplicateAttachments", function () {
       assert.equal(fullTextPdf?.annotationCount, 3);
     });
 
-    it("rejects notes and regular items", function () {
+    it("拒绝笔记与普通条目", function () {
       assert.isUndefined(
         toDuplicateAttachment(
           createMockItem({ key: "N1", kind: "note" }),
@@ -233,8 +233,8 @@ describe("duplicateAttachments", function () {
     });
   });
 
-  describe("collectDuplicateGroups", function () {
-    it("groups same-parent duplicates and keeps the annotated copy", async function () {
+  describe("collectDuplicateGroups 收集分组", function () {
+    it("对同一父条目下的重复分组并保留带批注的副本", async function () {
       const keep = registerItem(
         1,
         createMockItem({
@@ -275,7 +275,7 @@ describe("duplicateAttachments", function () {
       assert.equal(groups[0].keepKey, "1\x00KEEP");
     });
 
-    it("groups full-text PDFs saved with a source URL by filename within a parent", async function () {
+    it("在同一父条目内按文件名对带来源网址的全文 PDF 分组", async function () {
       const keep = registerItem(
         1,
         createMockItem({
@@ -318,7 +318,7 @@ describe("duplicateAttachments", function () {
       assert.equal(groups[0].keepKey, "1\x00KEEP");
     });
 
-    it("does not group same-named attachments under different parents", async function () {
+    it("不把不同父条目下的同名附件分组", async function () {
       registerItem(
         1,
         createMockItem({
@@ -354,7 +354,7 @@ describe("duplicateAttachments", function () {
       );
     });
 
-    it("groups duplicate link attachments by URL within a parent", async function () {
+    it("在同一父条目内按 URL 对重复链接附件分组", async function () {
       registerItem(
         1,
         createMockItem({
@@ -390,7 +390,7 @@ describe("duplicateAttachments", function () {
       assert.equal(groups[0].members[0].kind, "link-attachment");
     });
 
-    it("ignores non-regular selections and attachments without a grouping key", async function () {
+    it("忽略非普通条目的选中项与无分组键的附件", async function () {
       registerItem(
         1,
         createMockItem({
@@ -418,7 +418,7 @@ describe("duplicateAttachments", function () {
       );
     });
 
-    it("reports progress and yields to the UI every 50 items", async function () {
+    it("每 50 个条目汇报进度并让出给界面", async function () {
       const items = Array.from({ length: 120 }, (_value, index) =>
         createMockItem({ key: `P${index}`, kind: "regular" }),
       );

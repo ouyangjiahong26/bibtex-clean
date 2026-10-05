@@ -43,7 +43,7 @@ function linkAttachment(
 
 describe("duplicateGroups", function () {
   describe("toDuplicateGroups", function () {
-    it("groups file attachments sharing a filename case-insensitively", function () {
+    it("文件名相同的文件附件忽略大小写归为一组", function () {
       const groups = toDuplicateGroups([
         fileAttachment({ itemKey: "A1", filename: "Paper.PDF" }),
         fileAttachment({ itemKey: "A2", filename: "paper.pdf" }),
@@ -56,7 +56,7 @@ describe("duplicateGroups", function () {
       );
     });
 
-    it("keeps attachments with different filenames in separate groups or none", function () {
+    it("文件名不同的附件不混入同一组", function () {
       const groups = toDuplicateGroups([
         fileAttachment({ itemKey: "A1", filename: "paper.pdf" }),
         fileAttachment({ itemKey: "A2", filename: "supplement.pdf" }),
@@ -65,7 +65,7 @@ describe("duplicateGroups", function () {
       assert.lengthOf(groups, 0, "不同文件名单独成组，成员不足 2 不算重复");
     });
 
-    it("groups link attachments by exact URL but not across kinds", function () {
+    it("链接附件按完全相同的 URL 分组，且不跨类型混组", function () {
       const url = "https://example.com/paper";
       const groups = toDuplicateGroups([
         linkAttachment({ itemKey: "L1", url }),
@@ -82,7 +82,7 @@ describe("duplicateGroups", function () {
       );
     });
 
-    it("does not treat differently-cased URLs as duplicates", function () {
+    it("大小写不同的 URL 不视为重复", function () {
       const groups = toDuplicateGroups([
         linkAttachment({ itemKey: "L1", url: "https://example.com/Page" }),
         linkAttachment({ itemKey: "L2", url: "https://example.com/page" }),
@@ -91,7 +91,7 @@ describe("duplicateGroups", function () {
       assert.lengthOf(groups, 0);
     });
 
-    it("drops attachments without a filename or URL", function () {
+    it("丢弃没有文件名或 URL 的附件", function () {
       const groups = toDuplicateGroups([
         fileAttachment({ itemKey: "F1", filename: undefined }),
         fileAttachment({ itemKey: "F2", filename: "  " }),
@@ -102,7 +102,7 @@ describe("duplicateGroups", function () {
       assert.lengthOf(groups, 0);
     });
 
-    it("keeps groups within the same parent item separate from other parents", function () {
+    it("同一父条目内的分组与其他父条目分开", function () {
       const groups = toDuplicateGroups([
         fileAttachment({
           itemKey: "A1",
@@ -133,7 +133,7 @@ describe("duplicateGroups", function () {
       );
     });
 
-    it("sorts groups by parent title then group key, keeper first inside", function () {
+    it("分组先按父条目标题再按 groupKey 排序，组内保留者排最前", function () {
       const groups = toDuplicateGroups([
         fileAttachment({
           itemKey: "LATE",
@@ -174,7 +174,7 @@ describe("duplicateGroups", function () {
   });
 
   describe("pickKeep", function () {
-    it("prefers the member with the most annotations", function () {
+    it("优先选择批注数最多的成员", function () {
       const keep = pickKeep([
         fileAttachment({ itemKey: "PLAIN", dateAdded: "2024-01-01 00:00:00" }),
         fileAttachment({
@@ -187,7 +187,7 @@ describe("duplicateGroups", function () {
       assert.equal(keep.itemKey, "ANNOTATED");
     });
 
-    it("breaks annotation ties by earliest dateAdded", function () {
+    it("批注数相同时按最早的 dateAdded 决出", function () {
       const keep = pickKeep([
         fileAttachment({
           itemKey: "BOTH-LATE",
@@ -204,7 +204,7 @@ describe("duplicateGroups", function () {
       assert.equal(keep.itemKey, "BOTH-EARLY");
     });
 
-    it("falls back to the earliest member when none has annotations", function () {
+    it("都没有批注时回退到最早的成员", function () {
       const keep = pickKeep([
         fileAttachment({ itemKey: "NEW", dateAdded: "2024-06-01 00:00:00" }),
         fileAttachment({ itemKey: "OLD", dateAdded: "2024-01-01 00:00:00" }),
@@ -231,7 +231,7 @@ describe("duplicateGroups", function () {
       ]);
     }
 
-    it("checks every member except the keeper by default", function () {
+    it("默认勾选保留者以外的全部成员", function () {
       const groups = makeGroups();
       assert.deepEqual(defaultTrashKeys(groups), [
         duplicateAttachmentKey(
@@ -240,13 +240,13 @@ describe("duplicateGroups", function () {
       ]);
     });
 
-    it("toggles a key in and out", function () {
+    it("切换某键的勾选状态", function () {
       const key = defaultTrashKeys(makeGroups())[0];
       assert.deepEqual(toggleCheckedKey([key], key), []);
       assert.deepEqual(toggleCheckedKey([], key), [key]);
     });
 
-    it("returns checked attachments in group order", function () {
+    it("按分组顺序返回勾选的附件", function () {
       const checked = checkedAttachments(
         makeGroups(),
         defaultTrashKeys(makeGroups()),
@@ -258,7 +258,7 @@ describe("duplicateGroups", function () {
       );
     });
 
-    it("may delete the keeper too when the user checks the whole group", function () {
+    it("用户勾选整组时也可以删除保留者", function () {
       const groups = makeGroups();
       const allKeys = groups[0].members.map(duplicateAttachmentKey);
       const checked = checkedAttachments(groups, allKeys);

@@ -269,7 +269,7 @@ export async function cleanSelectedItems(
   adapters: CleanWorkflowAdapters,
   locale: Locale,
 ): Promise<void> {
-  const items = Zotero.getActiveZoteroPane().getSelectedItems();
+  const items = Zotero.getActiveZoteroPane()!.getSelectedItems();
   const workflow = CleanWorkflow.fromIdle()
     .selectItems(items)
     .compute(adapters.writer);

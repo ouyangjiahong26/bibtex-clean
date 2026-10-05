@@ -63,7 +63,7 @@ function createAdapters(locale: Locale) {
     filterDelete: {
       candidates: {
         collectCandidates: async () =>
-          collectCandidates(Zotero.getActiveZoteroPane().getSelectedItems()),
+          collectCandidates(Zotero.getActiveZoteroPane()!.getSelectedItems()),
       },
       dialog: {
         choose: (candidates) =>
@@ -76,7 +76,7 @@ function createAdapters(locale: Locale) {
       collect: {
         collectGroups: async (onProgress) =>
           collectDuplicateGroups(
-            Zotero.getActiveZoteroPane().getSelectedItems(),
+            Zotero.getActiveZoteroPane()!.getSelectedItems(),
             { onProgress },
           ),
       },

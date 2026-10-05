@@ -1,6 +1,5 @@
 import { assert } from "chai";
 import { createNotifier } from "../src/utils/notifications";
-import type { NotifierAdapter } from "../src/modules/cleanSession";
 import type { Change } from "../src/modules/changes";
 import type { Candidate } from "../src/modules/filterCandidates";
 import type { Locale } from "../src/utils/locale";
@@ -120,10 +119,7 @@ describe("createNotifier", function () {
   });
 
   it("showUndoableSuccess 使用受支持的进度类型并传递 undo 描述", function () {
-    let undoCalled = false;
-    const onUndo = () => {
-      undoCalled = true;
-    };
+    const onUndo = () => {};
 
     const notifier = createNotifier(fakeLocale);
     notifier.showUndoableSuccess("Cleaned", onUndo);

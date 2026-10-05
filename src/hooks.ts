@@ -156,26 +156,9 @@ function onShutdown(): void {
   delete Zotero[addon.data.config.addonInstance];
 }
 
-async function onNotify(
-  _event: string,
-  _type: string,
-  _ids: Array<string | number>,
-  _extraData: { [key: string]: any },
-) {}
-
-async function onPrefsEvent(_type: string, _data: { [key: string]: any }) {}
-
-function onShortcuts(_type: string) {}
-
-function onDialogEvents(_type: string) {}
-
 export default {
   onStartup,
   onShutdown,
   onMainWindowLoad,
   onMainWindowUnload,
-  onNotify,
-  onPrefsEvent,
-  onShortcuts,
-  onDialogEvents,
 };

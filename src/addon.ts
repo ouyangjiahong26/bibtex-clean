@@ -15,8 +15,6 @@ class Addon {
   };
   // 生命周期钩子
   public hooks: typeof hooks;
-  // 对外 API
-  public api: object;
 
   constructor() {
     this.data = {
@@ -27,7 +25,6 @@ class Addon {
       ztoolkit: createZToolkit(),
     };
     this.hooks = hooks;
-    this.api = {};
   }
 }
 

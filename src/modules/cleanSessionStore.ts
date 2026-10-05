@@ -45,6 +45,3 @@ export class CleanSessionStore {
     return this._operation !== undefined;
   }
 }
-
-/** Singleton store instance used across the plugin. */
-export const cleanSessionStore = new CleanSessionStore();

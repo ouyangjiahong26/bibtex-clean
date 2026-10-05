@@ -9,10 +9,8 @@ import {
   cleanSelectedItems,
   undoLastCleanOperation,
   type CleanWorkflowAdapters,
-  type UndoAdapters,
 } from "../src/modules/cleanSession";
 import { CleanSessionStore } from "../src/modules/cleanSessionStore";
-import type { Locale } from "../src/utils/locale";
 
 type NotifierCall =
   | { method: "showInfo"; text: string }
